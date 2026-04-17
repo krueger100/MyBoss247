@@ -1,0 +1,2680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boss Mode — Clickable Wireframe Prototype</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    color: #fff;
+  }
+
+  /* Header bar above phone */
+  .proto-header {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .proto-header h1 {
+    font-size: 20px;
+    color: #888;
+    font-weight: 500;
+    letter-spacing: 1px;
+  }
+  .proto-header .breadcrumb {
+    font-size: 12px;
+    color: #555;
+    margin-top: 4px;
+    min-height: 16px;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: #1C1C1E;
+    border-radius: 44px;
+    border: 3px solid #333;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+
+  /* Status bar */
+  .status-bar {
+    height: 54px;
+    background: #1C1C1E;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 28px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    position: relative;
+    z-index: 10;
+  }
+  .status-bar .notch {
+    width: 120px;
+    height: 28px;
+    background: #000;
+    border-radius: 0 0 18px 18px;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Screen container */
+  .screen-container {
+    height: calc(844px - 54px);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .screen {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    background: #1C1C1E;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    animation: fadeIn 0.2s ease;
+  }
+  .screen.active { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Screen header */
+  .screen-header {
+    padding: 16px 20px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #1C1C1E;
+    border-bottom: 1px solid #2C2C2E;
+    flex-shrink: 0;
+  }
+  .screen-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .back-btn {
+    font-size: 14px;
+    color: #3B82F6;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-weight: 500;
+    padding: 4px 0;
+  }
+  .back-btn:hover { color: #60A5FA; }
+  .header-action {
+    font-size: 13px;
+    color: #3B82F6;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-weight: 500;
+  }
+
+  /* Screen body */
+  .screen-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+  }
+  .screen-body::-webkit-scrollbar { width: 0; }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex;
+    background: #2C2C2E;
+    border-top: 1px solid #3A3A3C;
+    padding: 6px 0 22px;
+    flex-shrink: 0;
+  }
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    padding: 6px 0;
+    color: #888;
+    font-size: 10px;
+    border: none;
+    background: none;
+    transition: color 0.15s;
+  }
+  .tab:hover { color: #ccc; }
+  .tab.active { color: #22C55E; }
+  .tab svg { width: 22px; height: 22px; fill: currentColor; }
+
+  /* Common components */
+  .card {
+    background: #2C2C2E;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .card:hover { background: #3A3A3C; }
+  .card-label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+  .card-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .card-subtitle {
+    font-size: 13px;
+    color: #aaa;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 10px;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: #22C55E; color: #000; }
+  .btn-secondary { background: #3A3A3C; color: #fff; }
+  .btn-danger { background: #EF4444; color: #fff; }
+  .btn-warning { background: #EAB308; color: #000; }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid #3A3A3C;
+    color: #fff;
+  }
+  .btn-disabled {
+    background: #2C2C2E;
+    color: #555;
+    cursor: not-allowed;
+  }
+
+  .input-field {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid #3A3A3C;
+    background: #2C2C2E;
+    color: #fff;
+    font-size: 15px;
+    margin-bottom: 12px;
+    outline: none;
+  }
+  .input-field::placeholder { color: #666; }
+  .input-field:focus { border-color: #22C55E; }
+
+  .input-label {
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .divider {
+    height: 1px;
+    background: #2C2C2E;
+    margin: 16px 0;
+  }
+
+  .section-title {
+    font-size: 13px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    margin-top: 8px;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-green { background: #22C55E22; color: #22C55E; }
+  .badge-yellow { background: #EAB30822; color: #EAB308; }
+  .badge-orange { background: #F9731622; color: #F97316; }
+  .badge-red { background: #EF444422; color: #EF4444; }
+  .badge-blue { background: #3B82F622; color: #3B82F6; }
+  .badge-purple { background: #8B5CF622; color: #8B5CF6; }
+
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #3A3A3C;
+    border-radius: 3px;
+    margin: 8px 0;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+
+  .list-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    background: #2C2C2E;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .list-item:hover { background: #3A3A3C; }
+  .list-item .icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .list-item .info { flex: 1; }
+  .list-item .info .name { font-size: 15px; font-weight: 500; }
+  .list-item .info .desc { font-size: 12px; color: #888; margin-top: 2px; }
+  .list-item .arrow { color: #555; font-size: 18px; }
+
+  .task-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: #2C2C2E;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .task-item:hover { background: #3A3A3C; }
+  .task-checkbox {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #555;
+    margin-right: 12px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+  .task-checkbox.done {
+    background: #22C55E;
+    border-color: #22C55E;
+    color: #000;
+  }
+  .task-text { font-size: 14px; flex: 1; }
+  .task-text.done { text-decoration: line-through; color: #666; }
+  .task-priority {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #2C2C2E;
+  }
+  .stat-label { font-size: 14px; color: #aaa; }
+  .stat-value { font-size: 14px; font-weight: 600; }
+
+  .mood-icon {
+    font-size: 42px;
+    text-align: center;
+    margin: 8px 0;
+  }
+
+  .avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #3A3A3C;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .chat-bubble {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .chat-boss {
+    background: #2C2C2E;
+    color: #fff;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .chat-employee {
+    background: #22C55E;
+    color: #000;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  .chat-input-bar {
+    display: flex;
+    padding: 10px 16px 26px;
+    background: #2C2C2E;
+    border-top: 1px solid #3A3A3C;
+    gap: 8px;
+  }
+  .chat-input-bar input {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 20px;
+    border: 1px solid #3A3A3C;
+    background: #1C1C1E;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+  }
+  .chat-send {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #22C55E;
+    border: none;
+    color: #000;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .contract-text {
+    background: #2C2C2E;
+    border-radius: 12px;
+    padding: 20px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #ccc;
+    max-height: 380px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+  }
+  .contract-text h3 {
+    color: #fff;
+    font-size: 15px;
+    margin: 12px 0 6px;
+  }
+  .contract-text h3:first-child { margin-top: 0; }
+
+  .review-doc {
+    background: #2C2C2E;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .review-doc .review-header {
+    text-align: center;
+    border-bottom: 1px solid #3A3A3C;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+  }
+  .review-score {
+    font-size: 48px;
+    font-weight: 700;
+  }
+
+  .leaderboard-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: #2C2C2E;
+    border-radius: 10px;
+    margin-bottom: 6px;
+  }
+  .lb-rank {
+    font-size: 18px;
+    font-weight: 700;
+    width: 30px;
+    color: #EAB308;
+  }
+  .lb-bar {
+    flex: 1;
+    margin: 0 12px;
+  }
+
+  .penalty-tier {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: #2C2C2E;
+    border-radius: 10px;
+    margin-bottom: 6px;
+  }
+  .penalty-tier .tier-label { font-size: 14px; }
+  .penalty-tier .tier-amount { font-size: 16px; font-weight: 700; color: #EF4444; }
+
+  /* Screen-specific: onboarding progress */
+  .onboard-progress {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+  .onboard-step {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: #3A3A3C;
+  }
+  .onboard-step.done { background: #22C55E; }
+  .onboard-step.current { background: #EAB308; }
+
+  /* Floating label */
+  .screen-id {
+    position: absolute;
+    top: 6px;
+    right: 12px;
+    font-size: 9px;
+    color: #444;
+    z-index: 5;
+  }
+
+  .warning-banner {
+    padding: 10px 16px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="proto-header">
+  <h1>BOSS MODE — WIREFRAME PROTOTYPE</h1>
+  <div class="breadcrumb" id="breadcrumb">Auth > Login</div>
+</div>
+
+<div class="phone">
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="notch"></div>
+    <span>100%</span>
+  </div>
+
+  <div class="screen-container" id="screenContainer">
+
+    <!-- ============================================ -->
+    <!-- AUTH: LOGIN -->
+    <!-- ============================================ -->
+    <div class="screen active" id="screen-login">
+      <div class="screen-id">#1 Login</div>
+      <div class="screen-body" style="justify-content: center; display: flex; flex-direction: column;">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <div style="font-size: 48px; margin-bottom: 8px;">&#128188;</div>
+          <h2 style="font-size: 28px; margin-bottom: 4px;">Boss Mode</h2>
+          <p style="color: #888; font-size: 14px;">You're the employee. The app is your boss.</p>
+        </div>
+        <input class="input-field" type="email" placeholder="Email address">
+        <input class="input-field" type="password" placeholder="Password">
+        <button class="btn btn-primary" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">Clock In</button>
+        <button class="btn btn-outline" onclick="goTo('screen-signup', 'Auth > Signup')">Create Account</button>
+        <div style="text-align: center; margin-top: 8px;">
+          <button style="background:none;border:none;color:#3B82F6;font-size:13px;cursor:pointer" onclick="goTo('screen-forgot-pw', 'Auth > Forgot Password')">Forgot Password?</button>
+        </div>
+        <div class="divider"></div>
+        <button class="btn btn-secondary">&#xf8ff; Continue with Apple</button>
+        <button class="btn btn-secondary" style="margin-top:-2px">G Continue with Google</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- AUTH: SIGNUP -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-signup">
+      <div class="screen-id">#2 Signup</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-login', 'Auth > Login')">&#8592; Back</button>
+        <h2>Create Account</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div style="text-align:center;font-size:36px;margin:16px 0">&#128188;</div>
+        <input class="input-field" placeholder="Full name">
+        <input class="input-field" type="email" placeholder="Email address">
+        <input class="input-field" type="password" placeholder="Create password">
+        <input class="input-field" type="password" placeholder="Confirm password">
+        <button class="btn btn-primary" onclick="goTo('screen-quick-start', 'Onboarding > Quick Start')">Create Account</button>
+        <div class="divider"></div>
+        <button class="btn btn-secondary">&#xf8ff; Sign Up with Apple</button>
+        <button class="btn btn-secondary" style="margin-top:-2px">G Sign Up with Google</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- AUTH: FORGOT PASSWORD -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-forgot-pw">
+      <div class="screen-id">#3 Forgot Password</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-login', 'Auth > Login')">&#8592; Back</button>
+        <h2>Reset Password</h2>
+        <span></span>
+      </div>
+      <div class="screen-body" style="display:flex;flex-direction:column;justify-content:center">
+        <div style="text-align:center;font-size:48px;margin-bottom:16px">&#128274;</div>
+        <p style="text-align:center;color:#aaa;font-size:14px;margin-bottom:24px">Enter your email and we'll send you a reset link.</p>
+        <input class="input-field" type="email" placeholder="Email address">
+        <button class="btn btn-primary" onclick="goTo('screen-login', 'Auth > Login')">Send Reset Link</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- ONBOARDING: QUICK START (1 screen) -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-quick-start">
+      <div class="screen-id">#4 Quick Start</div>
+      <div class="screen-header">
+        <span></span>
+        <h2>Quick Start</h2>
+        <span style="font-size:11px;color:#888">30 sec</span>
+      </div>
+      <div class="screen-body">
+        <div style="text-align:center;margin:8px 0 20px">
+          <div style="font-size:42px">&#128188;</div>
+          <h3 style="font-size:18px;margin-top:8px">Let's set up your first project.</h3>
+          <p style="color:#888;font-size:13px;margin-top:4px">You'll be on your Dashboard in seconds.</p>
+        </div>
+        <label class="input-label">What are you building?</label>
+        <input class="input-field" placeholder="e.g. My SaaS App, E-Commerce Store..." value="My SaaS App">
+        <label class="input-label">What could it earn per year if you execute?</label>
+        <p style="font-size:11px;color:#555;margin-bottom:6px">Be ambitious. This sets the cost of every wasted hour.</p>
+        <input class="input-field" type="text" value="$10,000,000" style="font-size:22px;text-align:center;font-weight:700;color:#22C55E">
+        <div style="background:#2C2C2E;border-radius:10px;padding:10px;margin-bottom:16px;display:flex;justify-content:space-around;text-align:center">
+          <div><div style="font-size:15px;font-weight:700;color:#EF4444">$27,397</div><div style="font-size:9px;color:#888">Cost per wasted day</div></div>
+          <div style="width:1px;background:#3A3A3C"></div>
+          <div><div style="font-size:15px;font-weight:700;color:#EF4444">$1,142</div><div style="font-size:9px;color:#888">Cost per wasted hour</div></div>
+        </div>
+        <label class="input-label">Pick your Boss style</label>
+        <p style="font-size:11px;color:#555;margin-bottom:8px">How do you want to be managed?</p>
+        <div class="list-item" style="border:1px solid #3A3A3C;margin-bottom:6px">
+          <div class="icon" style="background:#EF444422;font-size:16px">&#129504;</div>
+          <div class="info"><div class="name">Drill Sergeant</div><div class="desc">Aggressive. Zero tolerance. Military-style.</div></div>
+          <span class="arrow" style="color:#555">&#9675;</span>
+        </div>
+        <div class="list-item" style="border:2px solid #22C55E;margin-bottom:6px">
+          <div class="icon" style="background:#22C55E22;font-size:16px">&#128526;</div>
+          <div class="info"><div class="name">Tough Coach</div><div class="desc">Firm but fair. Results-focused. Direct.</div></div>
+          <span style="color:#22C55E">&#10003;</span>
+        </div>
+        <div class="list-item" style="border:1px solid #3A3A3C">
+          <div class="icon" style="background:#3B82F622;font-size:16px">&#129309;</div>
+          <div class="info"><div class="name">Supportive Manager</div><div class="desc">Encouraging but accountable. Empathetic.</div></div>
+          <span class="arrow" style="color:#555">&#9675;</span>
+        </div>
+        <div style="height:16px"></div>
+        <button class="btn btn-primary" onclick="goTo('screen-dashboard', 'Tab: Dashboard')" style="font-size:17px">Clock In &#128170;</button>
+        <p style="font-size:10px;color:#555;text-align:center;margin-top:6px">3-day free trial &middot; Full access &middot; No credit card required</p>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROGRESSIVE: CONTRACT (after 3 tasks) -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-contract">
+      <div class="screen-id">#5 Employment Contract</div>
+      <div class="screen-header">
+        <span></span>
+        <h2>Employment Contract</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div style="background:#22C55E15;border:1px solid #22C55E33;border-radius:10px;padding:12px;margin-bottom:16px;text-align:center">
+          <span style="font-size:13px;color:#22C55E;font-weight:600">&#10003; 3 tasks completed — The Boss is impressed.</span>
+          <p style="font-size:12px;color:#888;margin-top:4px">"Good start. Before we go further — sign your contract."</p>
+        </div>
+        <div class="contract-text">
+          <h3>EMPLOYMENT AGREEMENT</h3>
+          <p>This agreement is entered into between <strong>The Boss</strong> and <strong>You</strong>, effective immediately upon signing.</p>
+          <h3>1. EMPLOYEE RESPONSIBILITIES</h3>
+          <p>The Employee agrees to: complete all assigned daily tasks before their deadlines; respond to all Boss check-ins within 1 hour; maintain honest progress reporting; accept financial penalties for failed commitments.</p>
+          <h3>2. CHECK-IN OBLIGATIONS</h3>
+          <p>The Boss will check in up to 4 times per day. Additional random check-ins may occur. The Employee must respond to every check-in with a status update or face escalation.</p>
+          <h3>3. BOSS AUTHORITY</h3>
+          <p>The Boss retains full authority to: assign tasks, adjust deadlines, escalate warnings, trigger penalties, and determine performance scores. The Boss's decisions on penalty triggers are final.</p>
+          <h3>4. PENALTY TERMS</h3>
+          <p>Penalties are voluntary commitment deposits configured by the Employee and are non-refundable once triggered. Penalty tiers: daily, weekly, monthly, quarterly, and per-milestone.</p>
+          <h3>5. PERSONAL DAYS</h3>
+          <p>2 Personal Days per month. Must be invoked before midnight. Personal Days preserve streaks and pause penalties for the day.</p>
+        </div>
+        <button class="btn btn-primary" onclick="goTo('screen-personality-confirm', 'Progressive > Boss Style')">I Accept and Sign &#9998;</button>
+        <button class="btn btn-outline" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">I'll sign later</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROGRESSIVE: PENALTY SETUP (Day 3) -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-penalty-setup">
+      <div class="screen-id">#6 Penalty Setup</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">&#8592; Later</button>
+        <h2>Penalty Setup</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div style="background:#EF444415;border:1px solid #EF444433;border-radius:10px;padding:12px;margin-bottom:16px;text-align:center">
+          <span style="font-size:13px;color:#EF4444;font-weight:600">Day 3 — Time to put money on the line.</span>
+          <p style="font-size:12px;color:#888;margin-top:4px">"Talk is cheap. Let's make failure expensive."</p>
+        </div>
+        <div class="penalty-tier"><span class="tier-label">Daily task missed</span><span class="tier-amount">$10</span></div>
+        <div class="penalty-tier"><span class="tier-label">Weekly goal missed</span><span class="tier-amount">$50</span></div>
+        <div class="penalty-tier"><span class="tier-label">Monthly goal missed</span><span class="tier-amount">$100</span></div>
+        <div class="penalty-tier"><span class="tier-label">Quarterly goal missed</span><span class="tier-amount">$250</span></div>
+        <div class="penalty-tier"><span class="tier-label">Milestone missed</span><span class="tier-amount" style="color:#F97316">Custom</span></div>
+        <div class="divider"></div>
+        <p style="font-size:13px;color:#aaa;margin-bottom:12px">Where should penalty money go?</p>
+        <button class="btn btn-secondary" style="text-align:left">&#127961; Charity — Select charities &#8594;</button>
+        <button class="btn btn-outline" style="text-align:left">&#129309; Accountability Partner — Set up later</button>
+        <div class="divider"></div>
+        <button class="btn btn-secondary" style="text-align:left">&#128179; Link Payment Method (Stripe) &#8594;</button>
+        <div style="height:12px"></div>
+        <button class="btn btn-primary" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">Activate Penalties &#128170;</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- UPGRADE: PRO/VIP PAYWALL -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-upgrade">
+      <div class="screen-id">#7 Upgrade</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+        <h2>Upgrade</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div style="text-align:center;margin:8px 0 16px">
+          <div style="background:#2C2C2E;border-radius:10px;padding:12px">
+            <p style="font-size:14px;font-style:italic;color:#EAB308">"Your trial is over. You've seen what I can do. Now pay up or walk away. I don't work for free."</p>
+            <p style="font-size:11px;color:#555;margin-top:4px">— The Boss</p>
+          </div>
+        </div>
+        <!-- Trial Limitations -->
+        <div style="background:#2C2C2E;border-radius:12px;padding:14px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Your Trial Limits</div>
+          <div style="font-size:11px;color:#666;line-height:1.8">
+            &#9679; 1 project &middot; &#9679; 2 check-ins/day &middot; &#9679; 10 Boss Chat msgs/day<br>
+            &#9679; Tough Coach only &middot; &#9679; 1 partner &middot; &#9679; 1 challenge<br>
+            &#9679; Basic Opp. Cost Clock &middot; &#9679; Summary review (no AI) &middot; &#9679; 1 personal day/mo
+          </div>
+        </div>
+
+        <div style="border:2px solid #22C55E;border-radius:14px;padding:16px;margin-bottom:12px;background:#22C55E08">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span class="badge badge-green" style="font-size:13px;padding:4px 10px">PRO</span>
+            <div><span style="font-size:22px;font-weight:800">$13.95</span><span style="color:#888;font-size:12px">/mo</span></div>
+          </div>
+          <div style="font-size:12px;color:#ccc;line-height:1.8">
+            &#10003; Unlimited projects &amp; partners<br>
+            &#10003; 4 check-ins/day + Boss Inbox<br>
+            &#10003; Unlimited Boss Chat<br>
+            &#10003; All 3 Boss personalities<br>
+            &#10003; Full AI Performance Reviews<br>
+            &#10003; Full Opportunity Cost Clock<br>
+            &#10003; 2 personal days/mo &middot; Charity + Partner penalties
+          </div>
+          <button class="btn btn-primary" style="margin-top:12px;margin-bottom:0" onclick="goBack()">Upgrade to Pro</button>
+        </div>
+        <div style="padding:2px;border-radius:16px;background:linear-gradient(135deg,#EAB308,#F97316);margin-bottom:12px">
+          <div style="background:#1C1C1E;border-radius:14px;padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <span class="badge" style="background:#EAB30822;color:#EAB308;font-size:13px;padding:4px 10px">&#128081; VIP</span>
+              <div><span style="font-size:22px;font-weight:800;color:#EAB308">$39.95</span><span style="color:#888;font-size:12px">/mo</span></div>
+            </div>
+            <div style="font-size:12px;color:#ccc;line-height:1.8">
+              &#10003; Everything in Pro<br>
+              &#128081; VIP High Stakes ($5,000+)<br>
+              &#128081; Priority verifier matching<br>
+              &#128081; Advanced analytics + export<br>
+              &#128081; Custom Boss tone tuning
+            </div>
+            <button class="btn btn-warning" style="margin-top:12px;margin-bottom:0" onclick="goBack()">&#128081; Go VIP</button>
+          </div>
+        </div>
+        <p style="font-size:11px;color:#555;text-align:center">Annual: Pro $111.60/yr &middot; VIP $319.60/yr (save 33%)</p>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROGRESSIVE: BOSS PERSONALITY CONFIRM (after contract signed) -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-personality-confirm">
+      <div class="screen-id">#P2 Boss Personality Confirm</div>
+      <div class="screen-header">
+        <span></span>
+        <h2>Your Boss Style</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div style="background:#22C55E15;border:1px solid #22C55E33;border-radius:10px;padding:12px;margin-bottom:16px;text-align:center">
+          <span style="font-size:13px;color:#22C55E;font-weight:600">&#10003; Contract signed — you're official.</span>
+          <p style="font-size:12px;color:#888;margin-top:4px">"Now tell me — how do you want me to manage you?"</p>
+        </div>
+        <p style="color:#aaa;font-size:13px;margin-bottom:16px">You picked <strong style="color:#fff">Tough Coach</strong> at signup. Confirm or change your Boss style below.</p>
+        <div class="list-item" style="border:1px solid #3A3A3C;margin-bottom:6px">
+          <div class="icon" style="background:#EF444422;font-size:16px">&#129504;</div>
+          <div class="info"><div class="name">Drill Sergeant</div><div class="desc">Aggressive. Zero tolerance. Military-style.</div></div>
+          <span class="arrow" style="color:#555">&#9675;</span>
+        </div>
+        <div class="list-item" style="border:2px solid #22C55E;margin-bottom:6px">
+          <div class="icon" style="background:#22C55E22;font-size:16px">&#128526;</div>
+          <div class="info"><div class="name">Tough Coach</div><div class="desc">Firm but fair. Results-focused. Direct.</div></div>
+          <span style="color:#22C55E">&#10003;</span>
+        </div>
+        <div class="list-item" style="border:1px solid #3A3A3C">
+          <div class="icon" style="background:#3B82F622;font-size:16px">&#129309;</div>
+          <div class="info"><div class="name">Supportive Manager</div><div class="desc">Encouraging but accountable. Empathetic.</div></div>
+          <span class="arrow" style="color:#555">&#9675;</span>
+        </div>
+        <div style="height:16px"></div>
+        <button class="btn btn-primary" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">Confirm Boss Style</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROGRESSIVE: GOAL SETUP (Day 2) -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-goal-setup">
+      <div class="screen-id">#P3 Goal Setup (Day 2)</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">&#8592; Later</button>
+        <h2>Set Your Goals</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div style="background:#3B82F615;border:1px solid #3B82F633;border-radius:10px;padding:12px;margin-bottom:16px;text-align:center">
+          <span style="font-size:13px;color:#3B82F6;font-weight:600">Day 2 — Let's set your bigger goals.</span>
+          <p style="font-size:12px;color:#888;margin-top:4px">"You've proven you can execute. Now let's aim higher."</p>
+        </div>
+        <p style="color:#aaa;font-size:13px;margin-bottom:16px">Start with your yearly goal. We'll drill it down to daily tasks.</p>
+        <label class="input-label">&#127919; Yearly Goal</label>
+        <input class="input-field" placeholder="e.g. Launch SaaS and reach $10k MRR">
+        <label class="input-label">&#128197; Q1 Goal (from yearly)</label>
+        <input class="input-field" placeholder="e.g. Ship MVP and get 50 beta users">
+        <label class="input-label">&#128197; This Month</label>
+        <input class="input-field" placeholder="e.g. Complete core features + landing page">
+        <label class="input-label">&#128197; This Week</label>
+        <input class="input-field" placeholder="e.g. Build auth flow + dashboard UI">
+        <label class="input-label">&#128197; Today</label>
+        <input class="input-field" placeholder="e.g. Set up project + create database schema">
+        <div style="height:12px"></div>
+        <button class="btn btn-primary" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">Save Goals &#127919;</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROGRESSIVE: INVITE PARTNER (Day 5) -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-invite-partner-prompt">
+      <div class="screen-id">#P5 Partner Invite (Day 5)</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">&#8592; Later</button>
+        <h2>Find a Rival</h2>
+        <span></span>
+      </div>
+      <div class="screen-body" style="display:flex;flex-direction:column;justify-content:center">
+        <div style="background:#8B5CF615;border:1px solid #8B5CF633;border-radius:10px;padding:12px;margin-bottom:16px;text-align:center">
+          <span style="font-size:13px;color:#8B5CF6;font-weight:600">Day 5 — You need a rival.</span>
+          <p style="font-size:12px;color:#888;margin-top:4px">"You're doing well alone. But you'll do better with someone to beat."</p>
+        </div>
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="font-size:48px">&#129309;</div>
+          <p style="color:#aaa;font-size:14px;margin-top:8px">Invite an accountability partner to compete with.</p>
+        </div>
+        <label class="input-label">Search by Email</label>
+        <input class="input-field" placeholder="partner@email.com">
+        <button class="btn btn-primary" onclick="goTo('screen-partners', 'Tab: Partners')">Send Invite</button>
+        <div class="divider"></div>
+        <label class="input-label">Or Share Your Invite Code</label>
+        <div style="background:#2C2C2E;border-radius:12px;padding:16px;text-align:center;margin-bottom:12px">
+          <div style="font-size:24px;font-weight:700;letter-spacing:4px;color:#22C55E">BOSS-7X4K</div>
+        </div>
+        <button class="btn btn-secondary">&#128203; Copy Invite Code</button>
+        <button class="btn btn-outline" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">I'll do this later</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROGRESSIVE: PENALTY SETUP (Day 3) -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-penalty-setup">
+      <div class="screen-id">#9 Penalty Setup</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-salary-setup', 'Onboarding > Opportunity Cost')">&#8592; Back</button>
+        <h2>Penalty Setup</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div class="onboard-progress">
+          <div class="onboard-step done"></div>
+          <div class="onboard-step done"></div>
+          <div class="onboard-step done"></div>
+          <div class="onboard-step done"></div>
+          <div class="onboard-step done"></div>
+          <div class="onboard-step current"></div>
+        </div>
+        <p style="color:#aaa;font-size:13px;margin-bottom:16px">Set how much it costs you when you fail. Make it painful.</p>
+        <div class="penalty-tier"><span class="tier-label">Daily task missed</span><span class="tier-amount">$10</span></div>
+        <div class="penalty-tier"><span class="tier-label">Weekly goal missed</span><span class="tier-amount">$50</span></div>
+        <div class="penalty-tier"><span class="tier-label">Monthly goal missed</span><span class="tier-amount">$100</span></div>
+        <div class="penalty-tier"><span class="tier-label">Quarterly goal missed</span><span class="tier-amount">$250</span></div>
+        <div class="divider"></div>
+        <p style="font-size:13px;color:#aaa;margin-bottom:12px">Where should penalty money go?</p>
+        <button class="btn btn-secondary" style="text-align:left">&#127961; Charity — Select charities &#8594;</button>
+        <button class="btn btn-outline" style="text-align:left">&#129309; Accountability Partner — Set up later</button>
+        <div class="divider"></div>
+        <button class="btn btn-secondary" style="text-align:left">&#128179; Link Payment Method (Stripe) &#8594;</button>
+        <div style="height:12px"></div>
+        <button class="btn btn-primary" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">Start Working &#128170;</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- TAB: DASHBOARD -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-dashboard">
+      <div class="screen-id">#10 Dashboard</div>
+      <div class="screen-header">
+        <span style="font-size:13px;color:#22C55E">&#128994; Clocked In</span>
+        <h2>Today's Briefing</h2>
+        <span style="font-size:13px;color:#888">Mon</span>
+      </div>
+      <div class="screen-body">
+        <!-- Warning Banner (highest active warning level) -->
+        <div class="warning-banner" style="background:#EAB30815;color:#EAB308;border:1px solid #EAB30833">
+          &#9888; <span>WARNING: "Connect Convex realtime" due in 3 hours — no progress logged.</span>
+        </div>
+
+        <!-- Boss Mood -->
+        <div class="card" onclick="goTo('screen-chat', 'Tab: Boss Chat')" style="text-align:center;padding:12px">
+          <div class="mood-icon">&#128526;</div>
+          <div style="font-size:13px;color:#22C55E;font-weight:600">The Boss is satisfied. Keep it up.</div>
+        </div>
+
+        <!-- Opportunity Cost Clock -->
+        <div class="card" style="cursor:default;border:1px solid #2C2C2E">
+          <div class="card-label">&#9201; Opportunity Cost Clock — All Projects</div>
+          <div style="text-align:center;margin:4px 0">
+            <div style="font-size:11px;color:#888">Today is worth</div>
+            <div style="font-size:28px;font-weight:800;color:#fff">$34,246</div>
+            <div style="font-size:11px;color:#888">across 3 active projects</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <div style="flex:1;background:#22C55E15;border-radius:8px;padding:8px;text-align:center">
+              <div style="font-size:16px;font-weight:700;color:#22C55E">$24,372</div>
+              <div style="font-size:10px;color:#888">Captured</div>
+            </div>
+            <div style="flex:1;background:#EF444415;border-radius:8px;padding:8px;text-align:center">
+              <div style="font-size:16px;font-weight:700;color:#EF4444">$9,874</div>
+              <div style="font-size:10px;color:#888">Slipping Away</div>
+            </div>
+          </div>
+          <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:71%;background:linear-gradient(90deg,#22C55E 0%,#22C55E 71%,#EF4444 71%,#EF4444 100%)"></div></div>
+          <div style="display:flex;gap:4px;margin-top:8px;font-size:10px">
+            <span style="color:#3B82F6">&#9679; SaaS $27.4K</span>
+            <span style="color:#555">&middot;</span>
+            <span style="color:#22C55E">&#9679; E-Com $5.5K</span>
+            <span style="color:#555">&middot;</span>
+            <span style="color:#F97316">&#9679; Consult $1.4K</span>
+          </div>
+        </div>
+
+        <!-- Progressive Onboarding Prompts (shown contextually) -->
+        <div class="card" onclick="goTo('screen-goal-setup', 'Progressive > Goal Setup')" style="border-left:3px solid #3B82F6;background:#3B82F610">
+          <div class="card-label" style="color:#3B82F6">&#127919; Day 2 — Set Your Goals</div>
+          <div class="card-title" style="font-size:14px">"You've proven you can execute. Now let's aim higher."</div>
+          <div class="card-subtitle">Tap to set yearly &rarr; daily goals</div>
+        </div>
+        <div class="card" onclick="goTo('screen-invite-partner-prompt', 'Progressive > Find a Rival')" style="border-left:3px solid #8B5CF6;background:#8B5CF610">
+          <div class="card-label" style="color:#8B5CF6">&#129309; Day 5 — Find a Rival</div>
+          <div class="card-title" style="font-size:14px">"You're doing well alone. But you'll do better with someone to beat."</div>
+          <div class="card-subtitle">Tap to invite an accountability partner</div>
+        </div>
+
+        <!-- Check-In Card -->
+        <div class="card" onclick="goTo('screen-checkin', 'Modal: Check-In Response')" style="border-left:3px solid #EAB308">
+          <div class="card-label" style="color:#EAB308">&#128276; Midday Check — Pending</div>
+          <div class="card-title">How's progress? Update me now.</div>
+          <div class="card-subtitle">Tap to respond to The Boss</div>
+        </div>
+
+        <!-- Stats Row -->
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <div style="flex:1;background:#2C2C2E;border-radius:10px;padding:12px;text-align:center">
+            <div style="font-size:24px;font-weight:700">&#128293; 14</div>
+            <div style="font-size:11px;color:#888">Day Streak</div>
+          </div>
+          <div style="flex:1;background:#2C2C2E;border-radius:10px;padding:12px;text-align:center">
+            <div style="font-size:24px;font-weight:700;color:#EF4444">$60</div>
+            <div style="font-size:11px;color:#888">At Stake Today</div>
+          </div>
+          <div style="flex:1;background:#2C2C2E;border-radius:10px;padding:12px;text-align:center;cursor:pointer" onclick="goTo('screen-personal-day', 'Modal: Personal Day')">
+            <div style="font-size:24px;font-weight:700">2</div>
+            <div style="font-size:11px;color:#888">Personal Days</div>
+          </div>
+        </div>
+
+        <!-- Today's Tasks -->
+        <div class="section-title">Today's Tasks (5 of 7 done)</div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox done">&#10003;</div>
+          <div style="flex:1"><span class="task-text done">Set up project repo</span><div><span class="badge" style="background:#3B82F622;color:#3B82F6;font-size:9px;margin-top:2px">SaaS App</span></div></div>
+          <span class="task-priority badge-green badge">Done</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox done">&#10003;</div>
+          <div style="flex:1"><span class="task-text done">Create database schema</span><div><span class="badge" style="background:#3B82F622;color:#3B82F6;font-size:9px;margin-top:2px">SaaS App</span></div></div>
+          <span class="task-priority badge-green badge">Done</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox done">&#10003;</div>
+          <div style="flex:1"><span class="task-text done">Build auth flow</span><div><span class="badge" style="background:#3B82F622;color:#3B82F6;font-size:9px;margin-top:2px">SaaS App</span></div></div>
+          <span class="task-priority badge-green badge">Done</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox done">&#10003;</div>
+          <div style="flex:1"><span class="task-text done">Source 3 new suppliers</span><div><span class="badge" style="background:#22C55E22;color:#22C55E;font-size:9px;margin-top:2px">E-Commerce</span></div></div>
+          <span class="task-priority badge-green badge">Done</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox done">&#10003;</div>
+          <div style="flex:1"><span class="task-text done">Write 2 blog posts</span><div><span class="badge" style="background:#F9731622;color:#F97316;font-size:9px;margin-top:2px">Consulting</span></div></div>
+          <span class="task-priority badge-green badge">Done</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox"></div>
+          <div style="flex:1"><span class="task-text">Build navigation tabs</span><div><span class="badge" style="background:#3B82F622;color:#3B82F6;font-size:9px;margin-top:2px">SaaS App</span></div></div>
+          <span class="task-priority badge-yellow badge">In Progress</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox"></div>
+          <div style="flex:1"><span class="task-text">Connect Convex realtime</span><div><span class="badge" style="background:#3B82F622;color:#3B82F6;font-size:9px;margin-top:2px">SaaS App</span></div></div>
+          <span class="task-priority badge-red badge">High</span>
+        </div>
+
+        <!-- Challenge Card -->
+        <div class="section-title">Active Challenge</div>
+        <div class="card" onclick="goTo('screen-challenge-detail', 'Modal: Challenge Detail')">
+          <div class="card-label" style="color:#8B5CF6">&#9876; 1v1 DUEL</div>
+          <div class="card-title">Ship 5 Features This Week</div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px">
+            <div style="text-align:center;flex:1">
+              <div style="font-size:11px;color:#888">You</div>
+              <div style="font-size:18px;font-weight:700;color:#22C55E">72%</div>
+            </div>
+            <div style="text-align:center;color:#555;font-size:12px;align-self:center">vs</div>
+            <div style="text-align:center;flex:1">
+              <div style="font-size:11px;color:#888">@alex</div>
+              <div style="font-size:18px;font-weight:700;color:#F97316">65%</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:#888;text-align:center;margin-top:6px">$50 stake &middot; 3 days left</div>
+        </div>
+
+        <!-- Progress -->
+        <div class="section-title">Goal Progress</div>
+        <div class="card" onclick="goTo('screen-projects', 'Tab: Projects')" style="padding:12px 16px">
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span>Weekly</span><span style="color:#22C55E">71%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:71%;background:#22C55E"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px"><span>Monthly</span><span style="color:#EAB308">45%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:45%;background:#EAB308"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px"><span>Quarterly</span><span style="color:#F97316">28%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:28%;background:#F97316"></div></div>
+        </div>
+
+        <div style="height:20px"></div>
+      </div>
+      <!-- Tab Bar -->
+      <div class="tab-bar">
+        <button class="tab active" onclick="goTo('screen-dashboard', 'Tab: Dashboard')"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Dashboard</button>
+        <button class="tab" onclick="goTo('screen-projects', 'Tab: Projects')"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>Projects</button>
+        <button class="tab" onclick="goTo('screen-partners', 'Tab: Partners')"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Partners</button>
+        <button class="tab" onclick="goTo('screen-chat', 'Tab: Boss Chat')"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>Boss Chat</button>
+        <button class="tab" onclick="goTo('screen-profile', 'Tab: Profile')"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profile</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- TAB: GOALS -->
+    <!-- ============================================ -->
+    <!-- ============================================ -->
+    <!-- TAB: PROJECTS -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-projects">
+      <div class="screen-id">#11 Projects</div>
+      <div class="screen-header">
+        <span></span>
+        <h2>Projects</h2>
+        <button class="header-action" onclick="goTo('screen-create-project', 'Modal: Create Project')">+ New</button>
+      </div>
+      <div class="screen-body">
+        <!-- Sub-view toggle -->
+        <div style="display:flex;background:#2C2C2E;border-radius:10px;padding:3px;margin-bottom:16px">
+          <button style="flex:1;padding:8px;border-radius:8px;border:none;background:#22C55E;color:#000;font-size:13px;font-weight:600;cursor:pointer" onclick="document.getElementById('projects-list').style.display='block';document.getElementById('all-tasks-list').style.display='none';this.style.background='#22C55E';this.style.color='#000';this.nextElementSibling.style.background='transparent';this.nextElementSibling.style.color='#888'">Projects</button>
+          <button style="flex:1;padding:8px;border-radius:8px;border:none;background:transparent;color:#888;font-size:13px;font-weight:600;cursor:pointer" onclick="document.getElementById('all-tasks-list').style.display='block';document.getElementById('projects-list').style.display='none';this.style.background='#22C55E';this.style.color='#000';this.previousElementSibling.style.background='transparent';this.previousElementSibling.style.color='#888'">All Tasks</button>
+        </div>
+
+        <!-- PROJECTS LIST VIEW -->
+        <div id="projects-list">
+          <p style="font-size:12px;color:#555;margin-bottom:12px">&#8597; Drag to reorder by priority</p>
+
+          <div class="card" onclick="goTo('screen-project-detail', 'Projects > SaaS App')" style="border-left:3px solid #3B82F6">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:20px">&#128187;</span>
+                  <div class="card-title">My SaaS App</div>
+                </div>
+                <div class="card-subtitle" style="margin-top:4px">5 goals &middot; 23 tasks &middot; 8 due today</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:18px;font-weight:700;color:#3B82F6">42%</div>
+                <div style="font-size:10px;color:#888">&#9650; Priority 1</div>
+              </div>
+            </div>
+            <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:42%;background:#3B82F6"></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #3A3A3C">
+              <div style="font-size:11px;color:#888">&#128184; Potential: <span style="color:#22C55E;font-weight:600">$10M/yr</span></div>
+              <div style="font-size:11px;color:#EF4444;font-weight:600">$27,397/day at stake</div>
+            </div>
+          </div>
+
+          <div class="card" onclick="goTo('screen-project-detail', 'Projects > E-Commerce')" style="border-left:3px solid #22C55E">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:20px">&#128722;</span>
+                  <div class="card-title">E-Commerce Store</div>
+                </div>
+                <div class="card-subtitle" style="margin-top:4px">3 goals &middot; 15 tasks &middot; 2 due today</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:18px;font-weight:700;color:#22C55E">68%</div>
+                <div style="font-size:10px;color:#888">&#9650; Priority 2</div>
+              </div>
+            </div>
+            <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:68%;background:#22C55E"></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #3A3A3C">
+              <div style="font-size:11px;color:#888">&#128184; Potential: <span style="color:#22C55E;font-weight:600">$2M/yr</span></div>
+              <div style="font-size:11px;color:#EF4444;font-weight:600">$5,479/day at stake</div>
+            </div>
+          </div>
+
+          <div class="card" onclick="goTo('screen-project-detail', 'Projects > Consulting')" style="border-left:3px solid #F97316">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:20px">&#128188;</span>
+                  <div class="card-title">Consulting Biz</div>
+                </div>
+                <div class="card-subtitle" style="margin-top:4px">2 goals &middot; 9 tasks &middot; 1 due today</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:18px;font-weight:700;color:#F97316">31%</div>
+                <div style="font-size:10px;color:#888">&#9650; Priority 3</div>
+              </div>
+            </div>
+            <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:31%;background:#F97316"></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #3A3A3C">
+              <div style="font-size:11px;color:#888">&#128184; Potential: <span style="color:#22C55E;font-weight:600">$500K/yr</span></div>
+              <div style="font-size:11px;color:#EF4444;font-weight:600">$1,370/day at stake</div>
+            </div>
+          </div>
+
+          <div class="card" onclick="goTo('screen-project-detail', 'Projects > YouTube')" style="border-left:3px solid #EAB308;opacity:0.6">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:20px">&#127909;</span>
+                  <div class="card-title">YouTube Channel</div>
+                </div>
+                <div class="card-subtitle" style="margin-top:4px">1 goal &middot; 4 tasks &middot; 0 due today</div>
+              </div>
+              <div style="text-align:right">
+                <span class="badge badge-yellow">Paused</span>
+                <div style="font-size:10px;color:#888;margin-top:2px">&#9650; Priority 4</div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #3A3A3C">
+              <div style="font-size:11px;color:#888">&#128184; Potential: <span style="color:#EAB308;font-weight:600">$300K/yr</span></div>
+              <div style="font-size:11px;color:#555">Paused — $0/day</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ALL TASKS VIEW (hidden by default) -->
+        <div id="all-tasks-list" style="display:none">
+          <div style="display:flex;gap:6px;margin-bottom:8px;overflow-x:auto">
+            <span class="badge badge-green" style="cursor:pointer;padding:6px 12px">Today</span>
+            <span class="badge" style="background:#2C2C2E;cursor:pointer;padding:6px 12px">Week</span>
+            <span class="badge" style="background:#2C2C2E;cursor:pointer;padding:6px 12px">Month</span>
+            <span class="badge" style="background:#2C2C2E;cursor:pointer;padding:6px 12px">Quarter</span>
+            <span class="badge" style="background:#2C2C2E;cursor:pointer;padding:6px 12px">Year</span>
+            <span class="badge" style="background:#2C2C2E;cursor:pointer;padding:6px 12px">All</span>
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto">
+            <span class="badge" style="background:#3B82F622;color:#3B82F6;cursor:pointer;padding:4px 10px;font-size:10px;border:1px solid #3B82F644">All Projects</span>
+            <span class="badge" style="background:#2C2C2E;cursor:pointer;padding:4px 10px;font-size:10px">&#128187; SaaS</span>
+            <span class="badge" style="background:#2C2C2E;cursor:pointer;padding:4px 10px;font-size:10px">&#128722; E-Com</span>
+            <span class="badge" style="background:#2C2C2E;cursor:pointer;padding:4px 10px;font-size:10px">&#128188; Consult</span>
+          </div>
+
+          <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+            <div class="task-checkbox done">&#10003;</div>
+            <div style="flex:1"><span class="task-text done">Set up project repo</span><div><span class="badge" style="background:#3B82F622;color:#3B82F6;font-size:9px;margin-top:2px">SaaS App</span></div></div>
+          </div>
+          <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+            <div class="task-checkbox done">&#10003;</div>
+            <div style="flex:1"><span class="task-text done">Create database schema</span><div><span class="badge" style="background:#3B82F622;color:#3B82F6;font-size:9px;margin-top:2px">SaaS App</span></div></div>
+          </div>
+          <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+            <div class="task-checkbox done">&#10003;</div>
+            <div style="flex:1"><span class="task-text done">Source 3 new suppliers</span><div><span class="badge" style="background:#22C55E22;color:#22C55E;font-size:9px;margin-top:2px">E-Commerce</span></div></div>
+          </div>
+          <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+            <div class="task-checkbox done">&#10003;</div>
+            <div style="flex:1"><span class="task-text done">Write 2 blog posts</span><div><span class="badge" style="background:#F9731622;color:#F97316;font-size:9px;margin-top:2px">Consulting</span></div></div>
+          </div>
+          <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+            <div class="task-checkbox"></div>
+            <div style="flex:1"><span class="task-text">Build navigation tabs</span><div><span class="badge" style="background:#3B82F622;color:#3B82F6;font-size:9px;margin-top:2px">SaaS App</span></div></div>
+            <span class="badge badge-yellow" style="font-size:10px">In Progress</span>
+          </div>
+          <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+            <div class="task-checkbox"></div>
+            <div style="flex:1"><span class="task-text">Connect Convex realtime</span><div><span class="badge" style="background:#3B82F622;color:#3B82F6;font-size:9px;margin-top:2px">SaaS App</span></div></div>
+            <span class="badge badge-red" style="font-size:10px">High</span>
+          </div>
+          <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+            <div class="task-checkbox"></div>
+            <div style="flex:1"><span class="task-text">Update product photos</span><div><span class="badge" style="background:#22C55E22;color:#22C55E;font-size:9px;margin-top:2px">E-Commerce</span></div></div>
+            <span class="badge badge-yellow" style="font-size:10px">Medium</span>
+          </div>
+          <div class="task-item" onclick="goTo('screen-create-task', 'Modal: Create Task')">
+            <div class="task-checkbox" style="border-style:dashed;color:#555">+</div>
+            <span class="task-text" style="color:#555">Add new task...</span>
+          </div>
+        </div>
+
+        <div style="height:20px"></div>
+      </div>
+      <div class="tab-bar">
+        <button class="tab" onclick="goTo('screen-dashboard', 'Tab: Dashboard')"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Dashboard</button>
+        <button class="tab active" onclick="goTo('screen-projects', 'Tab: Projects')"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>Projects</button>
+        <button class="tab" onclick="goTo('screen-partners', 'Tab: Partners')"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Partners</button>
+        <button class="tab" onclick="goTo('screen-chat', 'Tab: Boss Chat')"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>Boss Chat</button>
+        <button class="tab" onclick="goTo('screen-profile', 'Tab: Profile')"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profile</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- TAB: PARTNERS -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-partners">
+      <div class="screen-id">#12 Partners + Challenges</div>
+      <div class="screen-header">
+        <span></span>
+        <h2>Partners</h2>
+        <button class="header-action" onclick="goTo('screen-invite-partner', 'Modal: Invite Partner')">+ Invite</button>
+      </div>
+      <div class="screen-body">
+        <div class="section-title">Active Challenges</div>
+        <div class="card" onclick="goTo('screen-challenge-detail', 'Modal: Challenge Detail')">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <span class="badge badge-purple">&#9876; 1v1 Duel</span>
+              <div class="card-title" style="margin-top:6px">Ship 5 Features</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:18px;font-weight:700;color:#22C55E">72%</div>
+              <div style="font-size:11px;color:#888">vs 65%</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:#888;margin-top:6px">$50 stake &middot; 3 days left</div>
+        </div>
+
+        <button class="btn btn-secondary" onclick="goTo('screen-create-challenge', 'Modal: Create Challenge')">&#9876; Create New Challenge</button>
+
+        <!-- VIP HIGH STAKES -->
+        <div style="margin-top:20px;padding:2px;border-radius:14px;background:linear-gradient(135deg,#EAB308,#F97316,#EF4444,#EAB308)">
+          <div style="background:#1C1C1E;border-radius:12px;padding:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:18px">&#128081;</span>
+                <span style="font-size:14px;font-weight:700;color:#EAB308;letter-spacing:0.5px">VIP HIGH STAKES</span>
+              </div>
+              <span style="font-size:10px;color:#888">$5,000+ &middot; Verified</span>
+            </div>
+
+            <!-- Active VIP Challenge -->
+            <div class="card" onclick="goTo('screen-vip-detail', 'VIP > Challenge Detail')" style="border:1px solid #EAB30844;background:#EAB30808;margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <span class="badge" style="background:#EAB30822;color:#EAB308;font-size:10px">&#128081; VIP DUEL</span>
+                    <span class="badge" style="background:#22C55E22;color:#22C55E;font-size:10px">Active</span>
+                  </div>
+                  <div class="card-title" style="margin-top:6px">First to $5K MRR</div>
+                  <div style="font-size:11px;color:#888;margin-top:4px">vs @alex &middot; 47 days left</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:20px;font-weight:800;color:#EAB308">$10K</div>
+                  <div style="font-size:10px;color:#888">total pot</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:10px">
+                <div style="flex:1;background:#2C2C2E;border-radius:6px;padding:6px 8px;font-size:11px">
+                  <div style="color:#888">Your milestones</div>
+                  <div style="color:#22C55E;font-weight:600">1 of 3 verified &#10003;</div>
+                </div>
+                <div style="flex:1;background:#2C2C2E;border-radius:6px;padding:6px 8px;font-size:11px">
+                  <div style="color:#888">@alex milestones</div>
+                  <div style="color:#EAB308;font-weight:600">0 of 3 verified</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;margin-top:8px;font-size:10px;color:#888">
+                <span>&#128100;</span> Verified by: <span style="color:#EAB308">James Wright, Business Coach</span>
+              </div>
+            </div>
+
+            <button class="btn btn-outline" onclick="goTo('screen-vip-create', 'VIP > Create Challenge')" style="border-color:#EAB30844;color:#EAB308;font-size:14px;margin-bottom:0">&#128081; Create VIP Challenge</button>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:16px">My Partners</div>
+        <div class="list-item" onclick="goTo('screen-partner-detail', 'Modal: Partner Profile')">
+          <div class="icon" style="background:#8B5CF622;color:#8B5CF6">A</div>
+          <div class="info">
+            <div class="name">Alex Chen</div>
+            <div class="desc">&#128293; 21 day streak &middot; 89% completion</div>
+          </div>
+          <span class="arrow">&#8250;</span>
+        </div>
+        <div class="list-item" onclick="goTo('screen-partner-detail', 'Modal: Partner Profile')">
+          <div class="icon" style="background:#22C55E22;color:#22C55E">S</div>
+          <div class="info">
+            <div class="name">Sarah Kim</div>
+            <div class="desc">&#128293; 7 day streak &middot; 76% completion</div>
+          </div>
+          <span class="arrow">&#8250;</span>
+        </div>
+        <div class="list-item" onclick="goTo('screen-partner-detail', 'Modal: Partner Profile')">
+          <div class="icon" style="background:#EAB30822;color:#EAB308">M</div>
+          <div class="info">
+            <div class="name">Mike Torres</div>
+            <div class="desc">&#128293; 3 day streak &middot; 62% completion</div>
+          </div>
+          <span class="arrow">&#8250;</span>
+        </div>
+
+        <div class="section-title" style="margin-top:16px">Leaderboard</div>
+        <div class="leaderboard-row">
+          <span class="lb-rank">1</span>
+          <div class="avatar" style="width:32px;height:32px;font-size:14px;margin-right:10px">A</div>
+          <div class="lb-bar">
+            <div style="font-size:14px;font-weight:500">Alex Chen</div>
+            <div class="progress-bar" style="margin:4px 0"><div class="progress-fill" style="width:89%;background:#22C55E"></div></div>
+          </div>
+          <span style="font-size:14px;font-weight:600;color:#22C55E">89%</span>
+        </div>
+        <div class="leaderboard-row">
+          <span class="lb-rank">2</span>
+          <div class="avatar" style="width:32px;height:32px;font-size:14px;margin-right:10px">&#128100;</div>
+          <div class="lb-bar">
+            <div style="font-size:14px;font-weight:500">You</div>
+            <div class="progress-bar" style="margin:4px 0"><div class="progress-fill" style="width:82%;background:#22C55E"></div></div>
+          </div>
+          <span style="font-size:14px;font-weight:600">82%</span>
+        </div>
+        <div class="leaderboard-row">
+          <span class="lb-rank">3</span>
+          <div class="avatar" style="width:32px;height:32px;font-size:14px;margin-right:10px">S</div>
+          <div class="lb-bar">
+            <div style="font-size:14px;font-weight:500">Sarah Kim</div>
+            <div class="progress-bar" style="margin:4px 0"><div class="progress-fill" style="width:76%;background:#EAB308"></div></div>
+          </div>
+          <span style="font-size:14px;font-weight:600;color:#EAB308">76%</span>
+        </div>
+        <div style="height:20px"></div>
+      </div>
+      <div class="tab-bar">
+        <button class="tab" onclick="goTo('screen-dashboard', 'Tab: Dashboard')"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Dashboard</button>
+        <button class="tab" onclick="goTo('screen-projects', 'Tab: Projects')"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>Projects</button>
+        <button class="tab active" onclick="goTo('screen-partners', 'Tab: Partners')"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Partners</button>
+        <button class="tab" onclick="goTo('screen-chat', 'Tab: Boss Chat')"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>Boss Chat</button>
+        <button class="tab" onclick="goTo('screen-profile', 'Tab: Profile')"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profile</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- TAB: BOSS CHAT -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-chat">
+      <div class="screen-id">#13 Boss Chat</div>
+      <div class="screen-header">
+        <span></span>
+        <h2>The Boss</h2>
+        <button class="header-action" onclick="goTo('screen-review-detail', 'Modal: Performance Review')">Reviews</button>
+      </div>
+      <div class="chat-area">
+        <div style="text-align:center;font-size:11px;color:#555;margin-bottom:12px">Today, 12:04 PM</div>
+        <div class="chat-bubble chat-boss">Midday check. You've got 2 tasks still open. What's the status?</div>
+        <div class="chat-bubble chat-employee">Working on the nav tabs right now. Should be done in an hour.</div>
+        <div class="chat-bubble chat-boss">An hour. I'll hold you to that. What about the Convex realtime task?</div>
+        <div class="chat-bubble chat-employee">I'll start that right after.</div>
+        <div class="chat-bubble chat-boss">Good. Don't make me come back at 3 with bad news. Get it done.</div>
+        <div style="text-align:center;font-size:11px;color:#555;margin:12px 0">Today, 2:17 PM &middot; Boss Inbox</div>
+        <div class="chat-bubble chat-boss">I pulled your numbers. Three tasks still open. It's 2pm. Explain.</div>
+      </div>
+      <div class="chat-input-bar">
+        <input placeholder="Message The Boss...">
+        <button class="chat-send">&#8593;</button>
+      </div>
+      <div class="tab-bar">
+        <button class="tab" onclick="goTo('screen-dashboard', 'Tab: Dashboard')"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Dashboard</button>
+        <button class="tab" onclick="goTo('screen-projects', 'Tab: Projects')"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>Projects</button>
+        <button class="tab" onclick="goTo('screen-partners', 'Tab: Partners')"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Partners</button>
+        <button class="tab active" onclick="goTo('screen-chat', 'Tab: Boss Chat')"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>Boss Chat</button>
+        <button class="tab" onclick="goTo('screen-profile', 'Tab: Profile')"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profile</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- TAB: PROFILE -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-profile">
+      <div class="screen-id">#14 Profile + Settings</div>
+      <div class="screen-header">
+        <span></span>
+        <h2>Profile</h2>
+        <button class="header-action" onclick="goTo('screen-login', 'Auth > Login')">Log Out</button>
+      </div>
+      <div class="screen-body">
+        <div style="text-align:center;margin-bottom:20px">
+          <div class="avatar" style="width:72px;height:72px;font-size:28px;margin:0 auto 8px">&#128100;</div>
+          <div style="font-size:18px;font-weight:600">Sam</div>
+          <div style="font-size:13px;color:#888">SaaS Founder &middot; Clocked in 14 days</div>
+        </div>
+
+        <!-- Subscription Banner -->
+        <div class="card" onclick="goTo('screen-upgrade', 'Upgrade')" style="background:linear-gradient(135deg,#22C55E15,#22C55E05);border:1px solid #22C55E33;cursor:pointer">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <span class="badge badge-green" style="font-size:11px">FREE TRIAL</span>
+              <div style="font-size:13px;margin-top:4px">2 days left — choose a plan</div>
+            </div>
+            <span style="color:#22C55E;font-size:13px;font-weight:600">Upgrade &#8250;</span>
+          </div>
+        </div>
+
+        <div class="section-title">Employment</div>
+        <div class="list-item" onclick="goTo('screen-view-contract', 'Profile > View Contract')">
+          <div class="icon" style="background:#F9731622">&#128221;</div>
+          <div class="info"><div class="name">My Contract</div><div class="desc">Signed Mar 17, 2026</div></div>
+          <span class="arrow">&#8250;</span>
+        </div>
+        <div class="list-item" onclick="goTo('screen-perf-history', 'Profile > Performance Reviews')">
+          <div class="icon" style="background:#8B5CF622">&#128202;</div>
+          <div class="info"><div class="name">Performance Reviews</div><div class="desc">2 reviews archived</div></div>
+          <span class="arrow">&#8250;</span>
+        </div>
+        <div class="list-item" onclick="goTo('screen-stats', 'Profile > Lifetime Stats')">
+          <div class="icon" style="background:#22C55E22">&#127942;</div>
+          <div class="info"><div class="name">Lifetime Stats</div><div class="desc">Earnings, challenges, streaks</div></div>
+          <span class="arrow">&#8250;</span>
+        </div>
+
+        <div class="section-title">Boss Settings</div>
+        <div class="list-item" onclick="goTo('screen-boss-settings', 'Profile > Boss Settings')">
+          <div class="icon" style="background:#EAB30822">&#128225;</div>
+          <div class="info"><div class="name">Check-In Schedule</div><div class="desc">4 daily check-ins &middot; Boss Inbox: Normal</div></div>
+          <span class="arrow">&#8250;</span>
+        </div>
+
+        <div class="section-title">Money</div>
+        <div class="list-item" onclick="goTo('screen-penalty-settings', 'Profile > Penalty Settings')">
+          <div class="icon" style="background:#EF444422">&#128176;</div>
+          <div class="info"><div class="name">Penalty Settings</div><div class="desc">$10 / $50 / $100 / $250 per tier</div></div>
+          <span class="arrow">&#8250;</span>
+        </div>
+        <div class="list-item" onclick="goTo('screen-payment-setup', 'Profile > Payment Method')">
+          <div class="icon" style="background:#3B82F622">&#128179;</div>
+          <div class="info"><div class="name">Payment Method</div><div class="desc">Visa ending 4242</div></div>
+          <span class="arrow">&#8250;</span>
+        </div>
+        <div class="list-item" onclick="goTo('screen-charity-select', 'Profile > Select Charities')">
+          <div class="icon" style="background:#22C55E22">&#127961;</div>
+          <div class="info"><div class="name">My Charities</div><div class="desc">3 charities selected</div></div>
+          <span class="arrow">&#8250;</span>
+        </div>
+        <div class="list-item" onclick="goTo('screen-payment-history', 'Profile > Payment History')">
+          <div class="icon" style="background:#F9731622">&#128203;</div>
+          <div class="info"><div class="name">Payment History</div><div class="desc">$85 total penalties paid</div></div>
+          <span class="arrow">&#8250;</span>
+        </div>
+        <div style="height:20px"></div>
+      </div>
+      <div class="tab-bar">
+        <button class="tab" onclick="goTo('screen-dashboard', 'Tab: Dashboard')"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Dashboard</button>
+        <button class="tab" onclick="goTo('screen-projects', 'Tab: Projects')"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>Projects</button>
+        <button class="tab" onclick="goTo('screen-partners', 'Tab: Partners')"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Partners</button>
+        <button class="tab" onclick="goTo('screen-chat', 'Tab: Boss Chat')"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>Boss Chat</button>
+        <button class="tab active" onclick="goTo('screen-profile', 'Tab: Profile')"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profile</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- VIP: CHALLENGE DETAIL -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-vip-detail">
+      <div class="screen-id">#36 VIP Challenge Detail</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-partners', 'Tab: Partners')">&#8592; Back</button>
+        <h2>VIP Duel</h2>
+        <span style="font-size:18px">&#128081;</span>
+      </div>
+      <div class="screen-body">
+        <!-- Header card -->
+        <div style="background:linear-gradient(135deg,#EAB30815,#F9731610);border:1px solid #EAB30833;border-radius:14px;padding:16px;margin-bottom:16px">
+          <div style="text-align:center">
+            <span class="badge" style="background:#EAB30822;color:#EAB308;padding:6px 14px;font-size:12px">&#128081; VIP HIGH STAKES DUEL</span>
+            <h3 style="font-size:22px;margin-top:8px">First to $5K MRR</h3>
+            <p style="color:#888;font-size:13px;margin-top:4px">Mar 1 — Apr 30, 2026</p>
+          </div>
+          <div style="display:flex;justify-content:center;gap:6px;margin-top:12px">
+            <div style="background:#1C1C1E;border-radius:10px;padding:10px 20px;text-align:center">
+              <div style="font-size:28px;font-weight:800;color:#EAB308">$10,000</div>
+              <div style="font-size:10px;color:#888">Total Pot</div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-around;margin-top:12px;font-size:11px;color:#888">
+            <span>$5,000 your stake</span>
+            <span>&middot;</span>
+            <span>$5,000 @alex stake</span>
+            <span>&middot;</span>
+            <span>5% verifier fee</span>
+          </div>
+        </div>
+
+        <!-- Standings -->
+        <div style="display:flex;gap:10px;margin-bottom:16px">
+          <div style="flex:1;background:#22C55E10;border:1px solid #22C55E33;border-radius:12px;padding:14px;text-align:center">
+            <div style="font-size:11px;color:#888">YOU</div>
+            <div style="font-size:28px;font-weight:800;color:#22C55E;margin:4px 0">1/3</div>
+            <div style="font-size:11px;color:#888">milestones verified</div>
+            <span class="badge badge-green" style="margin-top:6px;font-size:10px">LEADING</span>
+          </div>
+          <div style="flex:1;background:#2C2C2E;border-radius:12px;padding:14px;text-align:center">
+            <div style="font-size:11px;color:#888">@ALEX</div>
+            <div style="font-size:28px;font-weight:800;margin:4px 0">0/3</div>
+            <div style="font-size:11px;color:#888">milestones verified</div>
+          </div>
+        </div>
+
+        <!-- Your Milestones -->
+        <div class="section-title">Your Milestones</div>
+        <div class="card" style="border-left:3px solid #22C55E;cursor:default">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="card-title" style="font-size:14px">Launch MVP to production</div>
+              <div style="font-size:11px;color:#888;margin-top:2px">Evidence: live URL + screenshot</div>
+            </div>
+            <span class="badge badge-green">&#10003; Verified</span>
+          </div>
+          <div style="font-size:10px;color:#22C55E;margin-top:6px">Verified by James Wright on Mar 15</div>
+        </div>
+        <div class="card" onclick="goTo('screen-vip-evidence', 'VIP > Submit Evidence')" style="border-left:3px solid #EAB308">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="card-title" style="font-size:14px">Get 50 paying customers</div>
+              <div style="font-size:11px;color:#888;margin-top:2px">Evidence: Stripe dashboard screenshot</div>
+            </div>
+            <span class="badge badge-yellow">In Progress</span>
+          </div>
+          <div style="font-size:10px;color:#EAB308;margin-top:6px">Tap to submit evidence when ready</div>
+        </div>
+        <div class="card" style="border-left:3px solid #555;cursor:default;opacity:0.6">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="card-title" style="font-size:14px">Hit $5K MRR</div>
+              <div style="font-size:11px;color:#888;margin-top:2px">Evidence: Stripe MRR chart + Baremetrics</div>
+            </div>
+            <span class="badge" style="background:#2C2C2E;color:#888">Pending</span>
+          </div>
+        </div>
+
+        <!-- Verifier -->
+        <div class="section-title" style="margin-top:16px">Assigned Verifier</div>
+        <div class="card" style="cursor:default;border:1px solid #EAB30833">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="avatar" style="background:#EAB30822;color:#EAB308;font-size:16px">&#128081;</div>
+            <div style="flex:1">
+              <div style="font-size:15px;font-weight:600">James Wright</div>
+              <div style="font-size:12px;color:#888">Business Coach &middot; 12 challenges verified</div>
+              <div style="font-size:11px;color:#EAB308;margin-top:2px">Verifier reviews evidence within 48 hours</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rules -->
+        <div class="section-title" style="margin-top:16px">Rules</div>
+        <div style="background:#2C2C2E;border-radius:12px;padding:14px;font-size:12px;color:#aaa;line-height:1.6">
+          <p>&#8226; First to complete all milestones wins the pot ($9,500 after verifier fee)</p>
+          <p>&#8226; If both complete all milestones, earliest completion timestamp wins</p>
+          <p>&#8226; If neither completes by deadline, both stakes go to charity</p>
+          <p>&#8226; Evidence must be submitted before deadline. Late submissions are invalid</p>
+          <p>&#8226; Verifier's decision is final and binding</p>
+          <p>&#8226; Stakes held in Stripe escrow until verifier determines winner</p>
+        </div>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- VIP: CREATE CHALLENGE -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-vip-create">
+      <div class="screen-id">#37 Create VIP Challenge</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-partners', 'Tab: Partners')">Cancel</button>
+        <h2>VIP Challenge</h2>
+        <span style="font-size:18px">&#128081;</span>
+      </div>
+      <div class="screen-body">
+        <div style="background:linear-gradient(135deg,#EAB30815,#F9731610);border:1px solid #EAB30833;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center">
+          <span style="font-size:28px">&#128081;</span>
+          <h3 style="font-size:16px;color:#EAB308;margin-top:4px">VIP High Stakes</h3>
+          <p style="font-size:12px;color:#888;margin-top:4px">Milestone-based. Human-verified. $5,000+ minimum.</p>
+        </div>
+
+        <label class="input-label">Challenge Title</label>
+        <input class="input-field" placeholder="e.g. First to $5K MRR">
+        <label class="input-label">Description</label>
+        <input class="input-field" placeholder="What are you competing on?">
+        <label class="input-label">Deadline</label>
+        <input class="input-field" type="date">
+
+        <label class="input-label">Stake Amount (per person)</label>
+        <p style="font-size:11px;color:#555;margin-bottom:6px">Minimum $5,000. Held in Stripe escrow.</p>
+        <input class="input-field" type="text" value="$5,000" style="font-size:22px;font-weight:700;text-align:center;color:#EAB308">
+        <div style="background:#2C2C2E;border-radius:8px;padding:10px;margin-bottom:16px;text-align:center;font-size:12px;color:#888">
+          Total pot: <span style="color:#EAB308;font-weight:700">$10,000</span> &middot; Verifier fee (5%): <span style="color:#888">$500</span> &middot; Winner takes: <span style="color:#22C55E;font-weight:700">$9,500</span>
+        </div>
+
+        <label class="input-label">Your Milestones (1–3)</label>
+        <p style="font-size:11px;color:#555;margin-bottom:8px">Define specific, measurable outcomes the verifier can confirm.</p>
+        <div style="background:#2C2C2E;border-radius:10px;padding:12px;margin-bottom:8px">
+          <input class="input-field" placeholder="Milestone 1: e.g. Launch MVP to production" style="margin-bottom:6px">
+          <input class="input-field" placeholder="Success criteria: What counts as done?" style="font-size:13px;margin-bottom:0">
+        </div>
+        <div style="background:#2C2C2E;border-radius:10px;padding:12px;margin-bottom:8px">
+          <input class="input-field" placeholder="Milestone 2: e.g. Get 50 paying customers" style="margin-bottom:6px">
+          <input class="input-field" placeholder="Success criteria: What evidence is needed?" style="font-size:13px;margin-bottom:0">
+        </div>
+        <div style="background:#2C2C2E;border-radius:10px;padding:12px;margin-bottom:8px">
+          <input class="input-field" placeholder="Milestone 3 (optional)" style="margin-bottom:6px">
+          <input class="input-field" placeholder="Success criteria" style="font-size:13px;margin-bottom:0">
+        </div>
+
+        <label class="input-label" style="margin-top:8px">Challenge Partner</label>
+        <div class="list-item">
+          <div class="icon" style="background:#8B5CF622;color:#8B5CF6">A</div>
+          <div class="info"><div class="name">Alex Chen</div><div class="desc">&#128081; 2 VIP challenges completed</div></div>
+          <span style="color:#22C55E">&#10003;</span>
+        </div>
+
+        <label class="input-label" style="margin-top:12px">Verifier</label>
+        <p style="font-size:11px;color:#555;margin-bottom:8px">An impartial reviewer who will verify milestone evidence and determine the winner.</p>
+        <div class="list-item" style="border:1px solid #EAB30833">
+          <div class="icon" style="background:#EAB30822;color:#EAB308">&#128081;</div>
+          <div class="info"><div class="name">James Wright</div><div class="desc">Business Coach &middot; 12 challenges verified &middot; 5% fee</div></div>
+          <span style="color:#22C55E">&#10003;</span>
+        </div>
+        <div class="list-item">
+          <div class="icon" style="background:#2C2C2E">&#128100;</div>
+          <div class="info"><div class="name">Maria Santos</div><div class="desc">SaaS Advisor &middot; 8 challenges verified &middot; 7% fee</div></div>
+          <span class="arrow" style="color:#555">&#9675;</span>
+        </div>
+        <div class="list-item">
+          <div class="icon" style="background:#2C2C2E">&#128100;</div>
+          <div class="info"><div class="name">Boss Mode Staff</div><div class="desc">Official verifier &middot; 10% fee</div></div>
+          <span class="arrow" style="color:#555">&#9675;</span>
+        </div>
+
+        <div style="height:16px"></div>
+        <button class="btn btn-warning" onclick="goTo('screen-vip-detail', 'VIP > Challenge Detail')" style="font-size:15px">&#128081; Send VIP Challenge — $5,000 Escrow</button>
+        <p style="font-size:10px;color:#555;text-align:center;margin-top:4px">Your card will be charged when your partner accepts.</p>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- VIP: SUBMIT EVIDENCE -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-vip-evidence">
+      <div class="screen-id">#38 Submit Evidence</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-vip-detail', 'VIP > Challenge Detail')">&#8592; Back</button>
+        <h2>Submit Evidence</h2>
+        <span style="font-size:18px">&#128081;</span>
+      </div>
+      <div class="screen-body">
+        <div style="background:#EAB30810;border:1px solid #EAB30833;border-radius:12px;padding:14px;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:600;color:#EAB308">Milestone 2</div>
+          <h3 style="font-size:18px;margin-top:4px">Get 50 Paying Customers</h3>
+          <p style="font-size:12px;color:#888;margin-top:4px">Success criteria: Stripe dashboard showing 50+ active subscriptions</p>
+        </div>
+
+        <label class="input-label">Evidence Type</label>
+        <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+          <span class="badge" style="background:#EAB30822;color:#EAB308;padding:8px 12px;cursor:pointer;border:1px solid #EAB308">&#128248; Screenshot</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">&#128279; URL</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">&#127909; Video</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">&#128196; Document</span>
+        </div>
+
+        <label class="input-label">Upload Screenshot</label>
+        <div style="background:#2C2C2E;border:2px dashed #3A3A3C;border-radius:12px;padding:32px;text-align:center;margin-bottom:16px;cursor:pointer">
+          <div style="font-size:32px;margin-bottom:8px">&#128247;</div>
+          <div style="font-size:14px;color:#888">Tap to upload screenshot</div>
+          <div style="font-size:11px;color:#555;margin-top:4px">PNG, JPG, or PDF — max 10MB</div>
+        </div>
+
+        <label class="input-label">Supporting URL (optional)</label>
+        <input class="input-field" placeholder="e.g. https://dashboard.stripe.com/...">
+
+        <label class="input-label">Description</label>
+        <input class="input-field" placeholder="Explain what this evidence shows..." style="height:70px">
+
+        <div style="background:#2C2C2E;border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:#888;line-height:1.5">
+          <span style="color:#EAB308">&#9888;</span> Your evidence will be reviewed by <strong style="color:#fff">James Wright</strong> within 48 hours. Your partner cannot see your evidence until they also submit.
+        </div>
+
+        <button class="btn btn-warning" onclick="goTo('screen-vip-detail', 'VIP > Challenge Detail')">&#128081; Submit Evidence for Review</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: PROJECT DETAIL -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-project-detail">
+      <div class="screen-id">#34 Project Detail</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-projects', 'Tab: Projects')">&#8592; Back</button>
+        <h2>My SaaS App</h2>
+        <button class="header-action" onclick="goTo('screen-create-project', 'Modal: Edit Project')">Edit</button>
+      </div>
+      <div class="screen-body">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="font-size:32px">&#128187;</span>
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span class="badge" style="background:#3B82F622;color:#3B82F6;padding:4px 10px">Active &middot; Priority 1</span>
+              <span style="font-size:18px;font-weight:700;color:#3B82F6">42%</span>
+            </div>
+            <div class="progress-bar" style="margin-top:6px"><div class="progress-fill" style="width:42%;background:#3B82F6"></div></div>
+          </div>
+        </div>
+
+        <!-- Project Earning Potential -->
+        <div style="background:#2C2C2E;border-radius:12px;padding:14px;margin-bottom:12px;border:1px solid #3A3A3C">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px">Earning Potential</div>
+              <div style="font-size:22px;font-weight:800;color:#22C55E">$10M<span style="font-size:13px;color:#888;font-weight:400"> / year</span></div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:10px;color:#888">Every day wasted =</div>
+              <div style="font-size:18px;font-weight:700;color:#EF4444">-$27,397</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid #3A3A3C">
+            <div style="flex:1;text-align:center">
+              <div style="font-size:14px;font-weight:700;color:#22C55E">$11,507</div>
+              <div style="font-size:9px;color:#888">Captured today</div>
+            </div>
+            <div style="width:1px;background:#3A3A3C"></div>
+            <div style="flex:1;text-align:center">
+              <div style="font-size:14px;font-weight:700;color:#EF4444">$15,890</div>
+              <div style="font-size:9px;color:#888">Slipping away</div>
+            </div>
+            <div style="width:1px;background:#3A3A3C"></div>
+            <div style="flex:1;text-align:center">
+              <div style="font-size:14px;font-weight:700">$1,142</div>
+              <div style="font-size:9px;color:#888">Per hour</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <div style="flex:1;background:#2C2C2E;border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:18px;font-weight:700">23</div>
+            <div style="font-size:10px;color:#888">Total Tasks</div>
+          </div>
+          <div style="flex:1;background:#2C2C2E;border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:18px;font-weight:700;color:#22C55E">15</div>
+            <div style="font-size:10px;color:#888">Completed</div>
+          </div>
+          <div style="flex:1;background:#2C2C2E;border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:18px;font-weight:700;color:#EF4444">8</div>
+            <div style="font-size:10px;color:#888">Remaining</div>
+          </div>
+        </div>
+
+        <div class="section-title">&#127919; Yearly Goal</div>
+        <div class="card" onclick="goTo('screen-goal-detail', 'Modal: Goal Detail')">
+          <div class="card-title">Launch SaaS — $10k MRR</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#888"><span>Due: Dec 31, 2026</span><span style="color:#F97316">28%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:28%;background:#F97316"></div></div>
+        </div>
+
+        <div class="section-title">&#128197; Q1 Goal</div>
+        <div class="card" onclick="goTo('screen-goal-detail', 'Modal: Goal Detail')">
+          <div class="card-title">Ship MVP + 50 Beta Users</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#888"><span>Due: Mar 31</span><span style="color:#EAB308">62%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:62%;background:#EAB308"></div></div>
+        </div>
+
+        <div class="section-title">&#128197; This Week</div>
+        <div class="card" onclick="goTo('screen-goal-detail', 'Modal: Goal Detail')">
+          <div class="card-title">Build Auth + Dashboard UI</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#888"><span>Due: Sun</span><span style="color:#22C55E">71%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:71%;background:#22C55E"></div></div>
+        </div>
+
+        <div class="section-title">Today's Tasks</div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox done">&#10003;</div><span class="task-text done">Set up project repo</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox done">&#10003;</div><span class="task-text done">Create database schema</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox"></div><span class="task-text">Build navigation tabs</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox"></div><span class="task-text">Connect Convex realtime</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-create-task', 'Modal: Create Task')">
+          <div class="task-checkbox" style="border-style:dashed;color:#555">+</div><span class="task-text" style="color:#555">Add task...</span>
+        </div>
+
+        <div style="height:8px"></div>
+        <button class="btn btn-secondary" onclick="goTo('screen-create-goal', 'Modal: Create Goal')">+ Add Goal to This Project</button>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: CREATE / EDIT PROJECT -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-create-project">
+      <div class="screen-id">#35 Create / Edit Project</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-projects', 'Tab: Projects')">Cancel</button>
+        <h2>New Project</h2>
+        <button class="header-action" onclick="goTo('screen-projects', 'Tab: Projects')">Save</button>
+      </div>
+      <div class="screen-body">
+        <label class="input-label">Project Name</label>
+        <input class="input-field" placeholder="e.g. My SaaS App, E-Commerce Store...">
+        <label class="input-label">Description</label>
+        <input class="input-field" placeholder="What is this project about?" style="height:70px">
+        <label class="input-label">&#128184; Annual Earning Potential</label>
+        <p style="font-size:12px;color:#666;margin-bottom:8px">How much could this project earn per year if you execute?</p>
+        <input class="input-field" type="text" placeholder="e.g. $10,000,000" style="font-size:20px;font-weight:700;text-align:center">
+        <div style="background:#2C2C2E;border-radius:10px;padding:12px;margin-bottom:16px;display:flex;justify-content:space-around">
+          <div style="text-align:center"><div style="font-size:13px;font-weight:700;color:#EF4444">$27,397</div><div style="font-size:9px;color:#888">Cost per wasted day</div></div>
+          <div style="text-align:center"><div style="font-size:13px;font-weight:700;color:#EF4444">$1,142</div><div style="font-size:9px;color:#888">Cost per wasted hour</div></div>
+        </div>
+        <label class="input-label">Icon</label>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <span style="font-size:28px;cursor:pointer;padding:6px;background:#3B82F622;border-radius:8px">&#128187;</span>
+          <span style="font-size:28px;cursor:pointer;padding:6px;background:#2C2C2E;border-radius:8px">&#128722;</span>
+          <span style="font-size:28px;cursor:pointer;padding:6px;background:#2C2C2E;border-radius:8px">&#128188;</span>
+          <span style="font-size:28px;cursor:pointer;padding:6px;background:#2C2C2E;border-radius:8px">&#127909;</span>
+          <span style="font-size:28px;cursor:pointer;padding:6px;background:#2C2C2E;border-radius:8px">&#128241;</span>
+          <span style="font-size:28px;cursor:pointer;padding:6px;background:#2C2C2E;border-radius:8px">&#127968;</span>
+          <span style="font-size:28px;cursor:pointer;padding:6px;background:#2C2C2E;border-radius:8px">&#128218;</span>
+          <span style="font-size:28px;cursor:pointer;padding:6px;background:#2C2C2E;border-radius:8px">&#127919;</span>
+        </div>
+        <label class="input-label">Colour Label</label>
+        <div style="display:flex;gap:10px;margin-bottom:16px">
+          <div style="width:32px;height:32px;border-radius:50%;background:#3B82F6;cursor:pointer;border:3px solid #fff"></div>
+          <div style="width:32px;height:32px;border-radius:50%;background:#22C55E;cursor:pointer"></div>
+          <div style="width:32px;height:32px;border-radius:50%;background:#F97316;cursor:pointer"></div>
+          <div style="width:32px;height:32px;border-radius:50%;background:#EAB308;cursor:pointer"></div>
+          <div style="width:32px;height:32px;border-radius:50%;background:#8B5CF6;cursor:pointer"></div>
+          <div style="width:32px;height:32px;border-radius:50%;background:#EF4444;cursor:pointer"></div>
+          <div style="width:32px;height:32px;border-radius:50%;background:#EC4899;cursor:pointer"></div>
+        </div>
+        <label class="input-label">Status</label>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <span class="badge badge-green" style="padding:8px 14px;cursor:pointer;flex:1;text-align:center">Active</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 14px;cursor:pointer;flex:1;text-align:center">Paused</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 14px;cursor:pointer;flex:1;text-align:center">Archived</span>
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn btn-primary" onclick="goTo('screen-projects', 'Tab: Projects')">Create Project</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: TASK DETAIL -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-task-detail">
+      <div class="screen-id">#15 Task Detail</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+        <h2>Task Detail</h2>
+        <button class="header-action">Edit</button>
+      </div>
+      <div class="screen-body">
+        <div style="text-align:center;margin:16px 0">
+          <div class="task-checkbox" style="width:48px;height:48px;margin:0 auto 8px;font-size:20px;border-width:3px">&#10003;</div>
+        </div>
+        <h3 style="font-size:20px;text-align:center;margin-bottom:4px">Build Navigation Tabs</h3>
+        <div style="text-align:center;margin-bottom:4px"><span class="badge" style="background:#3B82F622;color:#3B82F6;padding:4px 10px;font-size:12px">&#128187; SaaS App</span></div>
+        <p style="text-align:center;color:#888;font-size:13px;margin-bottom:20px">Part of: Build Auth + Dashboard UI (Weekly Goal)</p>
+
+        <div class="stat-row"><span class="stat-label">Status</span><span class="badge badge-yellow">In Progress</span></div>
+        <div class="stat-row"><span class="stat-label">Priority</span><span class="badge badge-red">High</span></div>
+        <div class="stat-row"><span class="stat-label">Due</span><span class="stat-value">Today, 6:00 PM</span></div>
+        <div class="stat-row"><span class="stat-label">Warning Level</span><span class="stat-value" style="color:#22C55E">&#128994; Green</span></div>
+        <div class="stat-row"><span class="stat-label">Penalty if Missed</span><span class="stat-value" style="color:#EF4444">$10</span></div>
+        <div class="stat-row"><span class="stat-label">Recurring</span><span class="stat-value">No</span></div>
+
+        <div class="divider"></div>
+        <p style="font-size:13px;color:#aaa">Set up the 5-tab bottom navigation with Expo Router: Dashboard, Goals, Partners, Boss Chat, Profile. Each tab should have a placeholder screen.</p>
+
+        <div style="height:20px"></div>
+        <button class="btn btn-primary" onclick="goBack()">&#10003; Mark as Complete</button>
+        <button class="btn btn-danger" onclick="goBack()">&#10007; Mark as Failed</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: GOAL DETAIL -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-goal-detail">
+      <div class="screen-id">#16 Goal Detail</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+        <h2>Goal Detail</h2>
+        <button class="header-action" onclick="goTo('screen-create-goal', 'Modal: Create Goal')">Edit</button>
+      </div>
+      <div class="screen-body">
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <span class="badge badge-blue">Weekly Goal</span>
+          <span class="badge" style="background:#3B82F622;color:#3B82F6">&#128187; SaaS App</span>
+        </div>
+        <h3 style="font-size:20px;margin-bottom:4px">Build Auth + Dashboard UI</h3>
+        <p style="color:#888;font-size:13px;margin-bottom:16px">Due: Sunday &middot; Parent: Core Features (Monthly)</p>
+        <div style="display:flex;justify-content:space-between;font-size:14px"><span>Progress</span><span style="color:#22C55E;font-weight:600">71%</span></div>
+        <div class="progress-bar" style="height:8px"><div class="progress-fill" style="width:71%;background:#22C55E"></div></div>
+
+        <div class="section-title" style="margin-top:20px">Tasks (5 of 7 done)</div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox done">&#10003;</div><span class="task-text done">Set up project repo</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox done">&#10003;</div><span class="task-text done">Create database schema</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox done">&#10003;</div><span class="task-text done">Build auth flow</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox done">&#10003;</div><span class="task-text done">Design dashboard layout</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox done">&#10003;</div><span class="task-text done">Write API endpoints</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox"></div><span class="task-text">Build navigation tabs</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-task-detail', 'Modal: Task Detail')">
+          <div class="task-checkbox"></div><span class="task-text">Connect Convex realtime</span>
+        </div>
+        <div class="task-item" onclick="goTo('screen-create-task', 'Modal: Create Task')">
+          <div class="task-checkbox" style="border-style:dashed;color:#555">+</div><span class="task-text" style="color:#555">Add task...</span>
+        </div>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: CREATE GOAL -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-create-goal">
+      <div class="screen-id">#17 Create / Edit Goal</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goBack()">Cancel</button>
+        <h2>New Goal</h2>
+        <button class="header-action" onclick="goBack()">Save</button>
+      </div>
+      <div class="screen-body">
+        <label class="input-label">Title</label>
+        <input class="input-field" placeholder="What do you want to achieve?">
+        <label class="input-label">Description</label>
+        <input class="input-field" placeholder="Details (optional)" style="height:80px">
+        <label class="input-label">Timeframe</label>
+        <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">Daily</span>
+          <span class="badge badge-blue" style="padding:8px 12px;cursor:pointer">Weekly</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">Monthly</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">Quarterly</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">Yearly</span>
+        </div>
+        <label class="input-label">Start Date</label>
+        <input class="input-field" type="date">
+        <label class="input-label">Due Date</label>
+        <input class="input-field" type="date">
+        <label class="input-label">Project</label>
+        <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+          <span class="badge" style="background:#3B82F622;color:#3B82F6;padding:8px 12px;cursor:pointer;border:1px solid #3B82F6">&#128187; SaaS App</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">&#128722; E-Commerce</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">&#128188; Consulting</span>
+        </div>
+        <label class="input-label">Parent Goal (optional)</label>
+        <input class="input-field" placeholder="Link to a higher-level goal">
+        <div style="height:20px"></div>
+        <button class="btn btn-primary" onclick="goBack()">Create Goal</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: CREATE TASK -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-create-task">
+      <div class="screen-id">#18 Create / Edit Task</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goBack()">Cancel</button>
+        <h2>New Task</h2>
+        <button class="header-action" onclick="goBack()">Save</button>
+      </div>
+      <div class="screen-body">
+        <label class="input-label">Title</label>
+        <input class="input-field" placeholder="What needs to be done?">
+        <label class="input-label">Description</label>
+        <input class="input-field" placeholder="Details (optional)">
+        <label class="input-label">Due Date</label>
+        <input class="input-field" type="date">
+        <label class="input-label">Due Time</label>
+        <input class="input-field" type="time" value="18:00">
+        <label class="input-label">Priority</label>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <span class="badge badge-red" style="padding:8px 16px;cursor:pointer;flex:1;text-align:center">High</span>
+          <span class="badge badge-yellow" style="padding:8px 16px;cursor:pointer;flex:1;text-align:center">Medium</span>
+          <span class="badge badge-green" style="padding:8px 16px;cursor:pointer;flex:1;text-align:center">Low</span>
+        </div>
+        <label class="input-label">Recurring?</label>
+        <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+          <span class="badge badge-blue" style="padding:8px 12px;cursor:pointer">No</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">Daily</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">Weekdays</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">Weekly</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">Monthly</span>
+        </div>
+        <label class="input-label">Project</label>
+        <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+          <span class="badge" style="background:#3B82F622;color:#3B82F6;padding:8px 12px;cursor:pointer;border:1px solid #3B82F6">&#128187; SaaS App</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">&#128722; E-Commerce</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">&#128188; Consulting</span>
+        </div>
+        <label class="input-label">Goal</label>
+        <input class="input-field" placeholder="Assign to a goal">
+        <div style="height:16px"></div>
+        <button class="btn btn-primary" onclick="goBack()">Create Task</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: CHECK-IN RESPONSE -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-checkin">
+      <div class="screen-id">#19 Check-In Response</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">&#8592; Back</button>
+        <h2>Midday Check</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div style="text-align:center;margin:8px 0 16px">
+          <div style="font-size:42px">&#128545;</div>
+          <p style="color:#EAB308;font-size:14px;font-weight:600;margin-top:4px">The Boss wants an update. Now.</p>
+        </div>
+        <div style="background:#2C2C2E;border-radius:12px;padding:16px;margin-bottom:16px">
+          <p style="font-size:14px;color:#fff;font-style:italic">"How's progress? Update me now. You've got 2 tasks left and it's past noon."</p>
+        </div>
+        <div class="section-title">Update your tasks:</div>
+        <div class="task-item">
+          <div class="task-checkbox done">&#10003;</div><span class="task-text done">Set up project repo</span>
+        </div>
+        <div class="task-item">
+          <div class="task-checkbox done">&#10003;</div><span class="task-text done">Create database schema</span>
+        </div>
+        <div class="task-item">
+          <div class="task-checkbox"></div><span class="task-text">Build navigation tabs</span>
+        </div>
+        <div class="task-item">
+          <div class="task-checkbox"></div><span class="task-text">Connect Convex realtime</span>
+        </div>
+        <div class="divider"></div>
+        <label class="input-label">Explain any delays:</label>
+        <input class="input-field" placeholder="Tell The Boss why...">
+        <button class="btn btn-primary" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">Submit Report</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: PERSONAL DAY -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-personal-day">
+      <div class="screen-id">#33 Personal Day</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">&#8592; Back</button>
+        <h2>Personal Day</h2>
+        <span></span>
+      </div>
+      <div class="screen-body" style="display:flex;flex-direction:column;justify-content:center;text-align:center">
+        <div style="font-size:56px;margin-bottom:12px">&#127780;</div>
+        <h3 style="font-size:20px;margin-bottom:8px">Invoke Personal Day?</h3>
+        <p style="color:#aaa;font-size:14px;margin-bottom:24px">Your streak will be preserved and all penalties will be paused for today.</p>
+        <div style="background:#2C2C2E;border-radius:12px;padding:16px;margin-bottom:20px;text-align:left">
+          <div class="stat-row"><span class="stat-label">Current Streak</span><span class="stat-value">&#128293; 14 days</span></div>
+          <div class="stat-row"><span class="stat-label">Personal Days Left</span><span class="stat-value">2 of 2</span></div>
+          <div class="stat-row" style="border:none"><span class="stat-label">Partners Notified</span><span class="stat-value">Yes</span></div>
+        </div>
+        <div style="background:#2C2C2E;border-radius:12px;padding:16px;margin-bottom:20px">
+          <p style="font-size:14px;font-style:italic;color:#EAB308">"Fine. Personal day approved. Don't make it a habit."</p>
+          <p style="font-size:11px;color:#555;margin-top:4px">— The Boss</p>
+        </div>
+        <button class="btn btn-warning" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">Confirm Personal Day</button>
+        <button class="btn btn-outline" onclick="goTo('screen-dashboard', 'Tab: Dashboard')">Cancel — I'll Keep Working</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: WEEKLY PERFORMANCE REVIEW -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-review-detail">
+      <div class="screen-id">#20 Performance Review</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goBack()">&#8592; Back</button>
+        <h2>Weekly Review</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div class="review-doc">
+          <div class="review-header">
+            <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px">Performance Review</div>
+            <div style="font-size:13px;color:#aaa;margin:4px 0">Week of Mar 24 — Mar 30, 2026</div>
+            <div class="review-score" style="color:#EAB308">73<span style="font-size:18px;color:#888">/100</span></div>
+            <span class="badge badge-yellow">Needs Improvement</span>
+          </div>
+          <div class="stat-row"><span class="stat-label">Tasks Completed</span><span class="stat-value">31 of 42</span></div>
+          <div class="stat-row"><span class="stat-label">Completion Rate</span><span class="stat-value">74%</span></div>
+          <div class="stat-row"><span class="stat-label">Penalties Triggered</span><span class="stat-value" style="color:#EF4444">3</span></div>
+          <div class="stat-row"><span class="stat-label">Penalty Total</span><span class="stat-value" style="color:#EF4444">$30</span></div>
+          <div class="stat-row"><span class="stat-label">Longest Streak</span><span class="stat-value">5 days</span></div>
+          <div class="stat-row"><span class="stat-label">Value Captured</span><span class="stat-value" style="color:#22C55E">$142,118</span></div>
+          <div class="stat-row"><span class="stat-label">Value Lost</span><span class="stat-value" style="color:#EF4444">$49,662</span></div>
+          <div class="divider"></div>
+          <h4 style="font-size:14px;margin-bottom:8px;color:#22C55E">What You Did Well</h4>
+          <p style="font-size:13px;color:#ccc;line-height:1.5">You shipped 3 major features ahead of schedule. Your morning productivity is consistently strong — most completions happen before noon. That's the discipline I expect.</p>
+          <h4 style="font-size:14px;margin:12px 0 8px;color:#EF4444">What Needs Work</h4>
+          <p style="font-size:13px;color:#ccc;line-height:1.5">Afternoons are your weak spot. Three tasks failed after 3 PM. You ignored two check-ins on Wednesday. That cost you $30. Not acceptable.</p>
+          <h4 style="font-size:14px;margin:12px 0 8px;color:#3B82F6">Next Week's Expectations</h4>
+          <p style="font-size:13px;color:#ccc;line-height:1.5">I want 85% or higher. Respond to every check-in. Zero ignored messages. You know what's at stake.</p>
+        </div>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: PARTNER DETAIL -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-partner-detail">
+      <div class="screen-id">#21 Partner Profile</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-partners', 'Tab: Partners')">&#8592; Back</button>
+        <h2>Partner</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div style="text-align:center;margin-bottom:20px">
+          <div class="avatar" style="width:72px;height:72px;font-size:28px;margin:0 auto 8px;background:#8B5CF622;color:#8B5CF6">A</div>
+          <div style="font-size:18px;font-weight:600">Alex Chen <span class="badge" style="background:#EAB30822;color:#EAB308;font-size:10px;vertical-align:middle;padding:2px 6px">&#128081; VIP</span></div>
+          <div style="font-size:13px;color:#888">Indie Hacker &middot; Partner since Mar 1</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <div style="flex:1;background:#2C2C2E;border-radius:10px;padding:12px;text-align:center">
+            <div style="font-size:20px;font-weight:700">&#128293; 21</div>
+            <div style="font-size:11px;color:#888">Streak</div>
+          </div>
+          <div style="flex:1;background:#2C2C2E;border-radius:10px;padding:12px;text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#22C55E">89%</div>
+            <div style="font-size:11px;color:#888">Completion</div>
+          </div>
+          <div style="flex:1;background:#2C2C2E;border-radius:10px;padding:12px;text-align:center">
+            <div style="font-size:20px;font-weight:700">&#128994;</div>
+            <div style="font-size:11px;color:#888">On Track</div>
+          </div>
+        </div>
+        <div class="section-title">Head-to-Head</div>
+        <div class="stat-row"><span class="stat-label">Challenges Played</span><span class="stat-value">4</span></div>
+        <div class="stat-row"><span class="stat-label">Your Wins</span><span class="stat-value" style="color:#22C55E">3</span></div>
+        <div class="stat-row"><span class="stat-label">Their Wins</span><span class="stat-value" style="color:#EF4444">1</span></div>
+        <div class="stat-row"><span class="stat-label">You Earned</span><span class="stat-value" style="color:#22C55E">$150</span></div>
+        <div class="stat-row"><span class="stat-label">You Paid</span><span class="stat-value" style="color:#EF4444">$50</span></div>
+        <div style="height:16px"></div>
+        <button class="btn btn-primary" onclick="goTo('screen-create-challenge', 'Modal: Create Challenge')">&#9876; Challenge This Partner</button>
+        <button class="btn btn-danger">End Partnership</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: INVITE PARTNER -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-invite-partner">
+      <div class="screen-id">#22 Invite Partner</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-partners', 'Tab: Partners')">&#8592; Back</button>
+        <h2>Invite Partner</h2>
+        <span></span>
+      </div>
+      <div class="screen-body" style="display:flex;flex-direction:column;justify-content:center">
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="font-size:48px">&#129309;</div>
+          <p style="color:#aaa;font-size:14px;margin-top:8px">Find an accountability partner to compete with.</p>
+        </div>
+        <label class="input-label">Search by Email</label>
+        <input class="input-field" placeholder="partner@email.com">
+        <button class="btn btn-primary" onclick="goTo('screen-partners', 'Tab: Partners')">Send Invite</button>
+        <div class="divider"></div>
+        <label class="input-label">Or Share Your Invite Code</label>
+        <div style="background:#2C2C2E;border-radius:12px;padding:16px;text-align:center;margin-bottom:12px">
+          <div style="font-size:24px;font-weight:700;letter-spacing:4px;color:#22C55E">BOSS-7X4K</div>
+        </div>
+        <button class="btn btn-secondary">&#128203; Copy Invite Code</button>
+        <button class="btn btn-outline">&#128228; Share via...</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: CHALLENGE DETAIL -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-challenge-detail">
+      <div class="screen-id">#23 Challenge Detail</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-partners', 'Tab: Partners')">&#8592; Back</button>
+        <h2>Challenge</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div style="text-align:center;margin-bottom:16px">
+          <span class="badge badge-purple" style="padding:6px 12px;font-size:13px">&#9876; 1v1 DUEL</span>
+          <h3 style="font-size:20px;margin-top:8px">Ship 5 Features This Week</h3>
+          <p style="color:#888;font-size:13px">Mar 24 — Mar 30 &middot; $50 stake each</p>
+        </div>
+
+        <!-- Live standings -->
+        <div style="display:flex;gap:12px;margin-bottom:16px">
+          <div style="flex:1;background:#22C55E15;border:1px solid #22C55E33;border-radius:12px;padding:16px;text-align:center">
+            <div style="font-size:11px;color:#888">YOU</div>
+            <div style="font-size:32px;font-weight:700;color:#22C55E">72%</div>
+            <div style="font-size:12px;color:#888">18 of 25 tasks</div>
+            <span class="badge badge-green" style="margin-top:6px">LEADING</span>
+          </div>
+          <div style="flex:1;background:#2C2C2E;border-radius:12px;padding:16px;text-align:center">
+            <div style="font-size:11px;color:#888">@ALEX</div>
+            <div style="font-size:32px;font-weight:700">65%</div>
+            <div style="font-size:12px;color:#888">13 of 20 tasks</div>
+          </div>
+        </div>
+
+        <div class="stat-row"><span class="stat-label">Stake</span><span class="stat-value">$50 each ($100 pot)</span></div>
+        <div class="stat-row"><span class="stat-label">Penalty Target</span><span class="stat-value">Winner Takes All</span></div>
+        <div class="stat-row"><span class="stat-label">Time Remaining</span><span class="stat-value" style="color:#F97316">3 days</span></div>
+        <div class="stat-row"><span class="stat-label">Status</span><span class="badge badge-green">Active</span></div>
+
+        <div class="section-title" style="margin-top:16px">Your Challenge Tasks</div>
+        <div class="task-item"><div class="task-checkbox done">&#10003;</div><span class="task-text done">Auth flow</span></div>
+        <div class="task-item"><div class="task-checkbox done">&#10003;</div><span class="task-text done">Database schema</span></div>
+        <div class="task-item"><div class="task-checkbox"></div><span class="task-text">Navigation tabs</span></div>
+        <div class="task-item"><div class="task-checkbox"></div><span class="task-text">Realtime sync</span></div>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: CREATE CHALLENGE -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-create-challenge">
+      <div class="screen-id">#24 Create Challenge</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-partners', 'Tab: Partners')">Cancel</button>
+        <h2>New Challenge</h2>
+        <button class="header-action" onclick="goTo('screen-challenge-detail', 'Modal: Challenge Detail')">Create</button>
+      </div>
+      <div class="screen-body">
+        <label class="input-label">Challenge Title</label>
+        <input class="input-field" placeholder="e.g. Ship 5 Features This Week">
+        <label class="input-label">Description</label>
+        <input class="input-field" placeholder="What's the challenge about?">
+        <label class="input-label">Start Date</label>
+        <input class="input-field" type="date">
+        <label class="input-label">End Date</label>
+        <input class="input-field" type="date">
+        <label class="input-label">Stake Amount (per person)</label>
+        <input class="input-field" type="text" placeholder="$50">
+        <label class="input-label">If the loser...</label>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="btn btn-secondary" style="flex:1;margin:0">&#127942; Pays Winner</button>
+          <button class="btn btn-outline" style="flex:1;margin:0">&#127961; Donates to Charity</button>
+        </div>
+        <label class="input-label">Challenge Partner</label>
+        <div class="list-item">
+          <div class="icon" style="background:#8B5CF622;color:#8B5CF6">A</div>
+          <div class="info"><div class="name">Alex Chen</div><div class="desc">&#128293; 21 day streak</div></div>
+          <span style="color:#22C55E">&#10003;</span>
+        </div>
+        <div style="height:16px"></div>
+        <button class="btn btn-primary" onclick="goTo('screen-challenge-detail', 'Modal: Challenge Detail')">&#9876; Send Challenge</button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROFILE: VIEW CONTRACT -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-view-contract">
+      <div class="screen-id">#25 View Contract</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-profile', 'Tab: Profile')">&#8592; Back</button>
+        <h2>My Contract</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div style="text-align:center;margin-bottom:16px">
+          <span class="badge badge-green" style="padding:6px 12px">&#10003; Signed Mar 17, 2026</span>
+        </div>
+        <div class="contract-text">
+          <h3>EMPLOYMENT AGREEMENT</h3>
+          <p>This agreement is entered into between <strong>The Boss</strong> and <strong>Sam</strong>, effective March 17, 2026.</p>
+          <h3>1. EMPLOYEE RESPONSIBILITIES</h3>
+          <p>The Employee agrees to complete all assigned daily tasks before their deadlines, respond to all Boss check-ins within 1 hour, and maintain honest progress reporting.</p>
+          <h3>2. CHECK-IN OBLIGATIONS</h3>
+          <p>Up to 4 scheduled check-ins per day. Additional random check-ins may occur. All check-ins require a response.</p>
+          <h3>3. BOSS AUTHORITY</h3>
+          <p>The Boss retains full authority to assign tasks, adjust deadlines, escalate warnings, trigger penalties, and determine performance scores.</p>
+          <h3>4. PENALTY TERMS</h3>
+          <p>Daily: $10 | Weekly: $50 | Monthly: $100 | Quarterly: $250 | Milestone: Custom</p>
+          <h3>5. PERSONAL DAYS</h3>
+          <p>2 per month, must invoke before midnight. Preserves streak and pauses penalties.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROFILE: PENALTY SETTINGS -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-penalty-settings">
+      <div class="screen-id">#26 Penalty Settings</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-profile', 'Tab: Profile')">&#8592; Back</button>
+        <h2>Penalties</h2>
+        <button class="header-action">Save</button>
+      </div>
+      <div class="screen-body">
+        <p style="color:#aaa;font-size:13px;margin-bottom:16px">How much does failure cost you?</p>
+        <div class="penalty-tier"><span class="tier-label">Daily task missed</span><span class="tier-amount">$10</span></div>
+        <div class="penalty-tier"><span class="tier-label">Weekly goal missed</span><span class="tier-amount">$50</span></div>
+        <div class="penalty-tier"><span class="tier-label">Monthly goal missed</span><span class="tier-amount">$100</span></div>
+        <div class="penalty-tier"><span class="tier-label">Quarterly goal missed</span><span class="tier-amount">$250</span></div>
+        <div class="penalty-tier"><span class="tier-label">Milestone missed</span><span class="tier-amount" style="color:#F97316">Custom</span></div>
+        <div class="divider"></div>
+        <div class="section-title">Default Penalty Target</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="btn btn-primary" style="flex:1;margin:0;font-size:14px">&#127961; Charity</button>
+          <button class="btn btn-outline" style="flex:1;margin:0;font-size:14px">&#129309; Partner</button>
+        </div>
+        <div class="section-title">Grace Period</div>
+        <div style="background:#2C2C2E;border-radius:10px;padding:14px;text-align:center">
+          <span style="font-size:18px;font-weight:600">24 hours</span>
+          <span style="font-size:12px;color:#888"> after deadline</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROFILE: BOSS SETTINGS -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-boss-settings">
+      <div class="screen-id">#27 Boss Settings</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-profile', 'Tab: Profile')">&#8592; Back</button>
+        <h2>Boss Settings</h2>
+        <button class="header-action">Save</button>
+      </div>
+      <div class="screen-body">
+        <div class="section-title">Boss Personality</div>
+        <div style="display:flex;gap:6px;margin-bottom:16px">
+          <div style="flex:1;background:#2C2C2E;border-radius:10px;padding:10px;text-align:center;cursor:pointer">
+            <div style="font-size:18px">&#129504;</div>
+            <div style="font-size:11px;color:#888;margin-top:2px">Drill Sergeant</div>
+          </div>
+          <div style="flex:1;background:#22C55E15;border:1px solid #22C55E44;border-radius:10px;padding:10px;text-align:center;cursor:pointer">
+            <div style="font-size:18px">&#128526;</div>
+            <div style="font-size:11px;color:#22C55E;margin-top:2px;font-weight:600">Tough Coach</div>
+          </div>
+          <div style="flex:1;background:#2C2C2E;border-radius:10px;padding:10px;text-align:center;cursor:pointer">
+            <div style="font-size:18px">&#129309;</div>
+            <div style="font-size:11px;color:#888;margin-top:2px">Supportive</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="section-title">Check-In Schedule</div>
+        <div class="stat-row"><span class="stat-label">&#127749; Morning Brief</span><span class="stat-value">8:00 AM</span></div>
+        <div class="stat-row"><span class="stat-label">&#9728; Midday Check</span><span class="stat-value">12:00 PM</span></div>
+        <div class="stat-row"><span class="stat-label">&#127750; Afternoon Push</span><span class="stat-value">3:00 PM</span></div>
+        <div class="stat-row"><span class="stat-label">&#127753; End of Day</span><span class="stat-value">6:00 PM</span></div>
+        <div class="divider"></div>
+        <div class="section-title">Boss Inbox (Random Messages)</div>
+        <div style="display:flex;gap:6px;margin-bottom:16px">
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">Off</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">Light (1x)</span>
+          <span class="badge badge-yellow" style="padding:8px 12px;cursor:pointer">Normal (2x)</span>
+          <span class="badge" style="background:#2C2C2E;padding:8px 12px;cursor:pointer">Intense (3x)</span>
+        </div>
+        <div class="stat-row"><span class="stat-label">Working Hours Window</span><span class="stat-value">9 AM — 6 PM</span></div>
+        <div class="divider"></div>
+        <div class="section-title">Weekly Review</div>
+        <div class="stat-row"><span class="stat-label">Review Day</span><span class="stat-value">Sunday</span></div>
+        <div class="stat-row"><span class="stat-label">Review Time</span><span class="stat-value">7:00 PM</span></div>
+        <div class="divider"></div>
+        <div class="section-title">Personal Days</div>
+        <div class="stat-row"><span class="stat-label">Per Month</span><span class="stat-value">2</span></div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROFILE: PAYMENT SETUP -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-payment-setup">
+      <div class="screen-id">#28 Payment Method</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-profile', 'Tab: Profile')">&#8592; Back</button>
+        <h2>Payment Method</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div class="section-title">Current Card</div>
+        <div class="card" style="cursor:default;border:1px solid #22C55E33">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:15px;font-weight:600">Visa ending 4242</div>
+              <div style="font-size:12px;color:#888">Expires 12/28</div>
+            </div>
+            <span class="badge badge-green">Default</span>
+          </div>
+        </div>
+        <button class="btn btn-secondary">+ Add New Card</button>
+        <div class="divider"></div>
+        <div class="section-title">Stripe Connect (to receive partner payments)</div>
+        <div class="card" style="cursor:default">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:14px">Connected Account</span>
+            <span class="badge badge-green">Active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROFILE: SELECT CHARITIES -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-charity-select">
+      <div class="screen-id">#29 Select Charities</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-profile', 'Tab: Profile')">&#8592; Back</button>
+        <h2>My Charities</h2>
+        <button class="header-action">Save</button>
+      </div>
+      <div class="screen-body">
+        <p style="color:#aaa;font-size:13px;margin-bottom:16px">Select where your penalty money goes. Choose up to 5.</p>
+        <div class="list-item"><div class="icon" style="background:#22C55E22">&#127795;</div><div class="info"><div class="name">WWF</div><div class="desc">Wildlife conservation</div></div><span style="color:#22C55E">&#10003;</span></div>
+        <div class="list-item"><div class="icon" style="background:#3B82F622">&#128218;</div><div class="info"><div class="name">Khan Academy</div><div class="desc">Free education worldwide</div></div><span style="color:#22C55E">&#10003;</span></div>
+        <div class="list-item"><div class="icon" style="background:#EF444422">&#10084;</div><div class="info"><div class="name">Red Cross</div><div class="desc">Disaster relief</div></div><span style="color:#22C55E">&#10003;</span></div>
+        <div class="list-item"><div class="icon" style="background:#2C2C2E">&#127758;</div><div class="info"><div class="name">Water.org</div><div class="desc">Clean water access</div></div><span class="arrow" style="color:#555">&#9675;</span></div>
+        <div class="list-item"><div class="icon" style="background:#2C2C2E">&#128011;</div><div class="info"><div class="name">ASPCA</div><div class="desc">Animal welfare</div></div><span class="arrow" style="color:#555">&#9675;</span></div>
+        <div class="list-item"><div class="icon" style="background:#2C2C2E">&#127981;</div><div class="info"><div class="name">Habitat for Humanity</div><div class="desc">Affordable housing</div></div><span class="arrow" style="color:#555">&#9675;</span></div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROFILE: PAYMENT HISTORY -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-payment-history">
+      <div class="screen-id">#30 Payment History</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-profile', 'Tab: Profile')">&#8592; Back</button>
+        <h2>Payment History</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <div style="flex:1;background:#EF444422;border-radius:10px;padding:12px;text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#EF4444">$85</div>
+            <div style="font-size:11px;color:#888">Total Paid</div>
+          </div>
+          <div style="flex:1;background:#22C55E22;border-radius:10px;padding:12px;text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#22C55E">$150</div>
+            <div style="font-size:11px;color:#888">Earned from Partners</div>
+          </div>
+        </div>
+        <div class="section-title">Recent</div>
+        <div class="card" style="cursor:default">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:14px">Missed: Build API docs</span><span style="color:#EF4444;font-weight:600">-$10</span></div>
+          <div style="font-size:12px;color:#888;margin-top:4px">Mar 28 &middot; Donated to WWF</div>
+        </div>
+        <div class="card" style="cursor:default">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:14px">Challenge won vs @alex</span><span style="color:#22C55E;font-weight:600">+$50</span></div>
+          <div style="font-size:12px;color:#888;margin-top:4px">Mar 24 &middot; Received via Stripe</div>
+        </div>
+        <div class="card" style="cursor:default">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:14px">Missed: Weekly review prep</span><span style="color:#EF4444;font-weight:600">-$50</span></div>
+          <div style="font-size:12px;color:#888;margin-top:4px">Mar 22 &middot; Donated to Khan Academy</div>
+        </div>
+        <div class="card" style="cursor:default">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:14px">Missed: Send outreach emails</span><span style="color:#EF4444;font-weight:600">-$25</span></div>
+          <div style="font-size:12px;color:#888;margin-top:4px">Mar 19 &middot; Paid to @sarah</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROFILE: PERFORMANCE HISTORY -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-perf-history">
+      <div class="screen-id">#31 Performance Archive</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-profile', 'Tab: Profile')">&#8592; Back</button>
+        <h2>Reviews</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div class="card" onclick="goTo('screen-review-detail', 'Modal: Performance Review')">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><div class="card-title">Week of Mar 24</div><div class="card-subtitle">31 of 42 tasks &middot; 3 penalties</div></div>
+            <div style="text-align:right"><div style="font-size:24px;font-weight:700;color:#EAB308">73</div><span class="badge badge-yellow">Needs Work</span></div>
+          </div>
+        </div>
+        <div class="card" onclick="goTo('screen-review-detail', 'Modal: Performance Review')">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><div class="card-title">Week of Mar 17</div><div class="card-subtitle">38 of 40 tasks &middot; 0 penalties</div></div>
+            <div style="text-align:right"><div style="font-size:24px;font-weight:700;color:#22C55E">95</div><span class="badge badge-green">Excellent</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PROFILE: LIFETIME STATS -->
+    <!-- ============================================ -->
+    <div class="screen" id="screen-stats">
+      <div class="screen-id">#32 Lifetime Stats</div>
+      <div class="screen-header">
+        <button class="back-btn" onclick="goTo('screen-profile', 'Tab: Profile')">&#8592; Back</button>
+        <h2>Stats</h2>
+        <span></span>
+      </div>
+      <div class="screen-body">
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="font-size:48px">&#127942;</div>
+          <div style="font-size:14px;color:#888">Your career at a glance</div>
+        </div>
+        <div class="section-title">Streaks</div>
+        <div class="stat-row"><span class="stat-label">Current Streak</span><span class="stat-value">&#128293; 14 days</span></div>
+        <div class="stat-row"><span class="stat-label">Longest Streak</span><span class="stat-value">&#128293; 21 days</span></div>
+        <div class="stat-row"><span class="stat-label">Personal Days Used</span><span class="stat-value">3 total</span></div>
+        <div class="section-title" style="margin-top:12px">Tasks</div>
+        <div class="stat-row"><span class="stat-label">Total Completed</span><span class="stat-value" style="color:#22C55E">342</span></div>
+        <div class="stat-row"><span class="stat-label">Total Failed</span><span class="stat-value" style="color:#EF4444">28</span></div>
+        <div class="stat-row"><span class="stat-label">Completion Rate</span><span class="stat-value">92.4%</span></div>
+        <div class="section-title" style="margin-top:12px">Opportunity Cost (All Projects)</div>
+        <div class="stat-row"><span class="stat-label">Combined Potential</span><span class="stat-value">$12.5M / year</span></div>
+        <div class="stat-row"><span class="stat-label">Total Value Captured</span><span class="stat-value" style="color:#22C55E">$412,580</span></div>
+        <div class="stat-row"><span class="stat-label">Total Value Lost</span><span class="stat-value" style="color:#EF4444">$31,170</span></div>
+        <div class="stat-row"><span class="stat-label">Capture Rate</span><span class="stat-value">93.0%</span></div>
+        <div style="margin-top:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#3B82F6">&#9679; SaaS App</span><span style="color:#888">$10M/yr &middot; 92.8%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#22C55E">&#9679; E-Commerce</span><span style="color:#888">$2M/yr &middot; 95.1%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:#F97316">&#9679; Consulting</span><span style="color:#888">$500K/yr &middot; 88.4%</span></div>
+        </div>
+        <div class="section-title" style="margin-top:12px">Challenges</div>
+        <div class="stat-row"><span class="stat-label">Challenges Won</span><span class="stat-value" style="color:#22C55E">7</span></div>
+        <div class="stat-row"><span class="stat-label">Challenges Lost</span><span class="stat-value" style="color:#EF4444">2</span></div>
+        <div class="stat-row"><span class="stat-label">Earned from Partners</span><span class="stat-value" style="color:#22C55E">$350</span></div>
+        <div class="stat-row"><span class="stat-label">Paid to Partners</span><span class="stat-value" style="color:#EF4444">$100</span></div>
+        <div class="section-title" style="margin-top:12px">Penalties</div>
+        <div class="stat-row"><span class="stat-label">Total Penalties</span><span class="stat-value" style="color:#EF4444">$85</span></div>
+        <div class="stat-row"><span class="stat-label">Money Saved (by completing)</span><span class="stat-value" style="color:#22C55E">$3,420</span></div>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+
+  </div><!-- /screen-container -->
+</div><!-- /phone -->
+
+<div style="text-align:center;margin-top:16px;color:#444;font-size:11px">
+  41 screens &middot; Click any button, tab, card, or task to navigate &middot; Breadcrumb shows current location
+</div>
+
+<script>
+  // Navigation history for back button
+  const history = ['screen-login'];
+  let currentScreen = 'screen-login';
+
+  function goTo(screenId, breadcrumb) {
+    // Hide current
+    const current = document.getElementById(currentScreen);
+    if (current) current.classList.remove('active');
+
+    // Show target
+    const target = document.getElementById(screenId);
+    if (target) {
+      target.classList.add('active');
+      history.push(currentScreen);
+      currentScreen = screenId;
+    }
+
+    // Update breadcrumb
+    if (breadcrumb) {
+      document.getElementById('breadcrumb').textContent = breadcrumb;
+    }
+
+    // Scroll to top of screen body
+    const body = target?.querySelector('.screen-body, .chat-area');
+    if (body) body.scrollTop = 0;
+  }
+
+  function goBack() {
+    if (history.length > 0) {
+      const prev = history.pop();
+      const current = document.getElementById(currentScreen);
+      if (current) current.classList.remove('active');
+
+      const target = document.getElementById(prev);
+      if (target) target.classList.add('active');
+      currentScreen = prev;
+
+      // Try to figure out breadcrumb from screen id
+      const screenEl = document.getElementById(prev);
+      const idLabel = screenEl?.querySelector('.screen-id');
+      if (idLabel) {
+        document.getElementById('breadcrumb').textContent = idLabel.textContent;
+      }
+    }
+  }
+</script>
+
+</body>
+</html>
