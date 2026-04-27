@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
-import { type TokenCache } from "@clerk/expo";
+import { type TokenCache } from "@clerk/clerk-expo/dist/cache";
 
 /**
  * Clerk token cache using expo-secure-store for native platforms.

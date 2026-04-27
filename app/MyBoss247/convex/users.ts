@@ -128,6 +128,76 @@ export const updateUser = mutation({
   },
 });
 
+/**
+ * Sync a Clerk user into Convex. Creates a new user row on first sign-in
+ * with safe defaults. Called every time the app loads for an authenticated user.
+ * Returns the user document.
+ */
+export const syncUser = mutation({
+  args: {
+    email: v.string(),
+    displayName: v.string(),
+    avatarUrl: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (existing) {
+      // Keep display name / email in sync with Clerk
+      const patch: Record<string, unknown> = {};
+      if (existing.email !== args.email) patch.email = args.email;
+      if (existing.displayName !== args.displayName)
+        patch.displayName = args.displayName;
+      if (args.avatarUrl && existing.avatarUrl !== args.avatarUrl)
+        patch.avatarUrl = args.avatarUrl;
+      if (Object.keys(patch).length > 0) {
+        await ctx.db.patch(existing._id, patch);
+      }
+      return existing._id;
+    }
+
+    const inviteCode = generateInviteCode();
+
+    const userId = await ctx.db.insert("users", {
+      clerkId: identity.subject,
+      email: args.email,
+      displayName: args.displayName,
+      avatarUrl: args.avatarUrl,
+      timezone: args.timezone ?? "UTC",
+      inviteCode,
+      bossSettings: {
+        personality: "tough_coach",
+        checkinTimes: {
+          morning: "08:00",
+          midday: "12:00",
+          afternoon: "15:00",
+          evening: "18:00",
+        },
+        inboxFrequency: "normal",
+        workingHoursStart: "09:00",
+        workingHoursEnd: "18:00",
+      },
+      personalDaysRemaining: 2,
+      personalDaysPerMonth: 2,
+      subscriptionTier: "trial",
+      subscriptionStatus: "active",
+      trialEndsAt: Date.now() + 3 * 24 * 60 * 60 * 1000,
+      currentStreak: 0,
+      longestStreak: 0,
+      onboardingStep: "quick_start",
+    });
+
+    return userId;
+  },
+});
+
 // Generate a random 8-character invite code
 function generateInviteCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No I, O, 0, 1 to avoid confusion

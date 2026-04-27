@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { Slot, useRouter, useSegments } from "expo-router";
-import { ClerkProvider, ClerkLoaded, useAuth, useUser } from "@clerk/expo";
+import { ClerkProvider, ClerkLoaded, useAuth } from "@clerk/clerk-expo";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
 import { TamaguiProvider, Theme } from "tamagui";
@@ -10,14 +10,12 @@ import * as SplashScreen from "expo-splash-screen";
 
 import tamaguiConfig from "../tamagui.config";
 import { tokenCache } from "../lib/tokenCache";
+import { useSyncUser } from "../hooks/useSyncUser";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 
-// Prevent splash screen from hiding until we're ready
 SplashScreen.preventAutoHideAsync();
 
-// Initialize Convex client (outside component to avoid recreation)
-const convex = new ConvexReactClient(
-  process.env.EXPO_PUBLIC_CONVEX_URL!
-);
+const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!);
 
 const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
@@ -28,26 +26,50 @@ if (!clerkPublishableKey) {
 }
 
 /**
- * Auth-aware routing: redirects to (auth) or (tabs) based on Clerk auth state.
+ * Auth-aware routing. Routes users between:
+ *   - (auth) group when signed out
+ *   - onboarding flow when Convex user has pending onboardingStep
+ *   - (tabs) when fully onboarded
  */
 function AuthenticatedLayout() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded: clerkLoaded } = useAuth();
+  const { synced } = useSyncUser();
+  const convexUser = useCurrentUser();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!clerkLoaded) return;
 
-    const inAuthGroup = segments[0] === "(auth)";
+    const group = segments[0] as string | undefined;
+    const inAuth = group === "(auth)";
+    const inOnboarding = group === "onboarding";
+    const inTabs = group === "(tabs)";
 
-    if (!isSignedIn && !inAuthGroup) {
-      // Not signed in and not on auth screen -> redirect to login
-      router.replace("/(auth)/login");
-    } else if (isSignedIn && inAuthGroup) {
-      // Signed in but on auth screen -> redirect to dashboard
+    // Not signed in
+    if (!isSignedIn) {
+      if (!inAuth) router.replace("/(auth)/login");
+      return;
+    }
+
+    // Signed in — wait for Convex user sync before routing
+    if (!synced || convexUser === undefined) return;
+
+    // First-time user or mid-onboarding
+    const needsOnboarding =
+      convexUser === null ||
+      (convexUser.onboardingStep && convexUser.onboardingStep !== "done");
+
+    if (needsOnboarding) {
+      if (!inOnboarding) router.replace("/onboarding/quick-start");
+      return;
+    }
+
+    // Fully onboarded — route to tabs
+    if (inAuth || inOnboarding) {
       router.replace("/(tabs)");
     }
-  }, [isSignedIn, isLoaded, segments]);
+  }, [isSignedIn, clerkLoaded, synced, convexUser, segments]);
 
   return (
     <>
@@ -57,24 +79,14 @@ function AuthenticatedLayout() {
   );
 }
 
-/**
- * Root layout: sets up the full provider chain.
- * ClerkProvider -> ConvexProviderWithClerk -> TamaguiProvider
- */
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    // Add custom fonts here if needed in the future
-  });
+  const [fontsLoaded] = useFonts({});
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
+    if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  if (!fontsLoaded) return null;
 
   return (
     <ClerkProvider

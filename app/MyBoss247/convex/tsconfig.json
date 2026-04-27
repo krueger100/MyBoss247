@@ -1,6 +1,12 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    "strict": true
+    "strict": true,
+    "noEmit": true,
+    "moduleResolution": "Bundler",
+    "module": "ESNext",
+    "target": "ESNext",
+    "isolatedModules": true,
+    "skipLibCheck": true
   }
 }

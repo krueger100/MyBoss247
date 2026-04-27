@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { useSignIn } from "@clerk/expo/legacy";
+import { useSignIn } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
 import { colors, spacing, fontSize, borderRadius } from "../../constants/theme";
 
