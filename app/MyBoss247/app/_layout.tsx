@@ -7,6 +7,7 @@ import { ConvexReactClient } from "convex/react";
 import { TamaguiProvider, Theme } from "tamagui";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import tamaguiConfig from "../tamagui.config";
 import { tokenCache } from "../lib/tokenCache";
@@ -89,19 +90,21 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <ClerkProvider
-      publishableKey={clerkPublishableKey}
-      tokenCache={tokenCache}
-    >
-      <ClerkLoaded>
-        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-          <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
-            <Theme name="dark">
-              <AuthenticatedLayout />
-            </Theme>
-          </TamaguiProvider>
-        </ConvexProviderWithClerk>
-      </ClerkLoaded>
-    </ClerkProvider>
+    <SafeAreaProvider>
+      <ClerkProvider
+        publishableKey={clerkPublishableKey}
+        tokenCache={tokenCache}
+      >
+        <ClerkLoaded>
+          <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+            <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
+              <Theme name="dark">
+                <AuthenticatedLayout />
+              </Theme>
+            </TamaguiProvider>
+          </ConvexProviderWithClerk>
+        </ClerkLoaded>
+      </ClerkProvider>
+    </SafeAreaProvider>
   );
 }

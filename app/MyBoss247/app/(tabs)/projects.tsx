@@ -1,72 +1,53 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "convex/react";
+import { useRouter } from "expo-router";
+import { api } from "../../convex/_generated/api";
 import { colors, spacing, fontSize, borderRadius } from "../../constants/theme";
 
-type Project = {
-  id: string;
-  title: string;
-  icon: string;
-  color: string;
-  annualPotential: number;
-  progress: number;
-  tasksTotal: number;
-  tasksToday: number;
-};
-
-const MOCK_PROJECTS: Project[] = [
-  {
-    id: "1",
-    title: "SaaS App",
-    icon: "💻",
-    color: "#22C55E",
-    annualPotential: 10000000,
-    progress: 42,
-    tasksTotal: 28,
-    tasksToday: 3,
-  },
-  {
-    id: "2",
-    title: "Consulting",
-    icon: "💼",
-    color: "#F97316",
-    annualPotential: 500000,
-    progress: 68,
-    tasksTotal: 12,
-    tasksToday: 1,
-  },
-  {
-    id: "3",
-    title: "Newsletter",
-    icon: "✉️",
-    color: "#8B5CF6",
-    annualPotential: 120000,
-    progress: 25,
-    tasksTotal: 8,
-    tasksToday: 1,
-  },
-];
-
 export default function ProjectsScreen() {
+  const router = useRouter();
   const [view, setView] = useState<"projects" | "tasks">("projects");
+
+  const projects = useQuery(api.projects.list);
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayTasks = useQuery(api.tasks.today, { dueDate: todayStr });
+
+  const taskCountsByProject = useMemo(() => {
+    const counts: Record<string, { today: number; total: number }> = {};
+    if (todayTasks) {
+      for (const t of todayTasks) {
+        if (!counts[t.projectId]) counts[t.projectId] = { today: 0, total: 0 };
+        counts[t.projectId].today++;
+        counts[t.projectId].total++;
+      }
+    }
+    return counts;
+  }, [todayTasks]);
+
+  const loading = projects === undefined;
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.title}>Projects</Text>
-        <TouchableOpacity style={styles.addBtn}>
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => router.push("/onboarding/quick-start")}
+        >
           <Ionicons name="add" size={22} color={colors.background} />
         </TouchableOpacity>
       </View>
 
-      {/* Segmented control */}
       <View style={styles.segment}>
         <TouchableOpacity
           style={[styles.segmentBtn, view === "projects" && styles.segmentActive]}
@@ -96,62 +77,161 @@ export default function ProjectsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {view === "projects" &&
-          MOCK_PROJECTS.map((p) => {
-            const daily = Math.round(p.annualPotential / 365);
-            return (
-              <TouchableOpacity key={p.id} style={styles.projectCard} activeOpacity={0.8}>
-                <View style={styles.projectHeader}>
-                  <View style={styles.projectLeft}>
-                    <View style={[styles.iconCircle, { backgroundColor: p.color + "20" }]}>
-                      <Text style={styles.icon}>{p.icon}</Text>
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.content}>
+          {view === "projects" &&
+            (projects.length === 0 ? (
+              <EmptyState
+                icon="briefcase-outline"
+                title="No projects yet"
+                description="The Boss needs something to manage. Create your first project to get to work."
+                actionLabel="Create Project"
+                onAction={() => router.push("/onboarding/quick-start")}
+              />
+            ) : (
+              projects.map((p) => {
+                const daily = Math.round(p.annualPotential / 365);
+                const counts = taskCountsByProject[p._id] ?? {
+                  today: 0,
+                  total: 0,
+                };
+                return (
+                  <TouchableOpacity
+                    key={p._id}
+                    style={styles.projectCard}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.projectHeader}>
+                      <View style={styles.projectLeft}>
+                        <View
+                          style={[
+                            styles.iconCircle,
+                            { backgroundColor: p.colour + "20" },
+                          ]}
+                        >
+                          <Text style={styles.icon}>{p.icon}</Text>
+                        </View>
+                        <View>
+                          <Text style={styles.projectTitle}>{p.title}</Text>
+                          <Text style={styles.projectSub}>
+                            Worth ${daily.toLocaleString()}/day
+                          </Text>
+                        </View>
+                      </View>
+                      <Ionicons
+                        name="reorder-three"
+                        size={22}
+                        color={colors.textMuted}
+                      />
                     </View>
-                    <View>
-                      <Text style={styles.projectTitle}>{p.title}</Text>
-                      <Text style={styles.projectSub}>
-                        Worth ${daily.toLocaleString()}/day
+
+                    <View style={styles.progressBar}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          {
+                            width: `${p.progressPercentage}%`,
+                            backgroundColor: p.colour,
+                          },
+                        ]}
+                      />
+                    </View>
+
+                    <View style={styles.projectFooter}>
+                      <Text style={styles.footerText}>
+                        {Math.round(p.progressPercentage)}% complete
+                      </Text>
+                      <Text style={styles.footerText}>
+                        {counts.today} today
                       </Text>
                     </View>
-                  </View>
-                  <Ionicons name="reorder-three" size={22} color={colors.textMuted} />
-                </View>
+                  </TouchableOpacity>
+                );
+              })
+            ))}
 
-                <View style={styles.progressBar}>
+          {view === "tasks" &&
+            (todayTasks === undefined ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : todayTasks.length === 0 ? (
+              <EmptyState
+                icon="list-outline"
+                title="No tasks today"
+                description="Tasks across all your projects will appear here."
+              />
+            ) : (
+              todayTasks.map((t) => (
+                <View key={t._id} style={styles.taskCard}>
                   <View
                     style={[
-                      styles.progressFill,
-                      { width: `${p.progress}%`, backgroundColor: p.color },
+                      styles.dot,
+                      { backgroundColor: t.projectColor },
                     ]}
                   />
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.taskTitle,
+                        t.status === "completed" && styles.taskDone,
+                      ]}
+                    >
+                      {t.title}
+                    </Text>
+                    <Text style={styles.taskMeta}>
+                      {t.projectTitle}
+                      {t.dueTime ? ` · ${t.dueTime}` : ""}
+                    </Text>
+                  </View>
+                  {t.status === "completed" && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.green}
+                    />
+                  )}
                 </View>
-
-                <View style={styles.projectFooter}>
-                  <Text style={styles.footerText}>{p.progress}% complete</Text>
-                  <Text style={styles.footerText}>
-                    {p.tasksToday} today · {p.tasksTotal} total
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-
-        {view === "tasks" && (
-          <View style={styles.emptyState}>
-            <Ionicons name="list-outline" size={56} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>All Tasks View</Text>
-            <Text style={styles.emptyText}>
-              Cross-project task list coming next. For now, see today's tasks on the Dashboard.
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+              ))
+            ))}
+        </ScrollView>
+      )}
     </SafeAreaView>
+  );
+}
+
+function EmptyState({
+  icon,
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  description: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <View style={styles.emptyState}>
+      <Ionicons name={icon} size={56} color={colors.textMuted} />
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyText}>{description}</Text>
+      {actionLabel && onAction && (
+        <TouchableOpacity style={styles.emptyCta} onPress={onAction}>
+          <Text style={styles.emptyCtaText}>{actionLabel}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -187,7 +267,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   segmentTextActive: { color: colors.text },
-  content: { padding: spacing.md, gap: spacing.md },
+  content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl },
   projectCard: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
@@ -224,6 +304,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   footerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: "600" },
+  taskCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  taskTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: "500" },
+  taskDone: { textDecorationLine: "line-through", color: colors.textMuted },
+  taskMeta: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
   emptyState: {
     alignItems: "center",
     justifyContent: "center",
@@ -235,5 +329,19 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     textAlign: "center",
+    lineHeight: 20,
+  },
+  emptyCta: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.sm,
+  },
+  emptyCtaText: {
+    color: colors.background,
+    fontSize: fontSize.md,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
 });

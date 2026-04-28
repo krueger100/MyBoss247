@@ -52,6 +52,45 @@ export const listByDate = query({
 });
 
 /**
+ * All tasks for the current user, ordered by due date asc then sortOrder.
+ * Includes project info for badges.
+ */
+export const listAll = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user) return [];
+
+    const tasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .collect();
+
+    const projectIds = [...new Set(tasks.map((t) => t.projectId))];
+    const projects = await Promise.all(projectIds.map((id) => ctx.db.get(id)));
+    const projectMap = new Map(
+      projects.filter(Boolean).map((p) => [p!._id, p!])
+    );
+
+    return tasks
+      .map((t) => ({
+        ...t,
+        projectTitle: projectMap.get(t.projectId)?.title ?? "Unknown",
+        projectColor: projectMap.get(t.projectId)?.colour ?? "#22C55E",
+      }))
+      .sort((a, b) => {
+        if (a.dueDate !== b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+        return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+      });
+  },
+});
+
+/**
  * Today's tasks shortcut — uses the user's local date in their timezone.
  * For simplicity we accept the date string from client (since timezone
  * conversion is easier on the client).

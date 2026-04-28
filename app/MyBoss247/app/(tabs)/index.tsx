@@ -1,26 +1,29 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "expo-router";
 import { api } from "../../convex/_generated/api";
+import { TaskCreateSheet } from "../../components/TaskCreateSheet";
 import { colors, spacing, fontSize, borderRadius } from "../../constants/theme";
 
 export default function DashboardScreen() {
   const { user } = useUser();
   const router = useRouter();
 
+  const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   const todayStr = new Date().toISOString().split("T")[0];
-  const tasks = useQuery(api.tasks.today, { dueDate: todayStr });
+  const tasks = useQuery(api.tasks.listAll);
   const projects = useQuery(api.projects.list);
   const convexUser = useQuery(api.users.getCurrentUser);
   const toggleTask = useMutation(api.tasks.toggleComplete);
@@ -36,8 +39,9 @@ export default function DashboardScreen() {
     );
   }, [projects]);
 
-  const completedTasks = tasks?.filter((t) => t.status === "completed") ?? [];
-  const totalTasks = tasks?.length ?? 0;
+  const todaysTasks = tasks?.filter((t) => t.dueDate === todayStr) ?? [];
+  const completedTasks = todaysTasks.filter((t) => t.status === "completed");
+  const totalTasks = todaysTasks.length;
   const completionRatio = totalTasks > 0 ? completedTasks.length / totalTasks : 0;
   const captured = Math.round(dailyPotential * completionRatio);
   const slipping = dailyPotential - captured;
@@ -48,15 +52,15 @@ export default function DashboardScreen() {
   const personalDaysRemaining = convexUser?.personalDaysRemaining ?? 0;
 
   const highestWarning = useMemo(() => {
-    if (!tasks) return "green";
-    if (tasks.some((t) => t.warningLevel === "red" && t.status !== "completed"))
+    if (!todaysTasks) return "green";
+    if (todaysTasks.some((t) => t.warningLevel === "red" && t.status !== "completed"))
       return "red";
-    if (tasks.some((t) => t.warningLevel === "orange" && t.status !== "completed"))
+    if (todaysTasks.some((t) => t.warningLevel === "orange" && t.status !== "completed"))
       return "orange";
-    if (tasks.some((t) => t.warningLevel === "yellow" && t.status !== "completed"))
+    if (todaysTasks.some((t) => t.warningLevel === "yellow" && t.status !== "completed"))
       return "yellow";
     return "green";
-  }, [tasks]);
+  }, [todaysTasks]);
 
   const bossMood = {
     green: { emoji: "😐", label: "On Track", color: colors.green },
@@ -182,8 +186,8 @@ export default function DashboardScreen() {
 
         {/* Tasks */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's Tasks</Text>
-          <TouchableOpacity>
+          <Text style={styles.sectionTitle}>Your Tasks</Text>
+          <TouchableOpacity onPress={() => setTaskSheetOpen(true)}>
             <Text style={styles.sectionAction}>+ Add</Text>
           </TouchableOpacity>
         </View>
@@ -191,89 +195,146 @@ export default function DashboardScreen() {
         {tasks.length === 0 ? (
           <View style={styles.noTasks}>
             <Text style={styles.noTasksText}>
-              No tasks today. The Boss is watching.
+              No tasks yet. Tap + Add to create one.
             </Text>
           </View>
         ) : (
-          <View style={styles.taskList}>
-            {tasks.map((task) => (
-              <TouchableOpacity
-                key={task._id}
-                style={[
-                  styles.taskItem,
-                  task.status === "overdue" && styles.taskOverdue,
-                ]}
-                onPress={() => toggleTask({ taskId: task._id })}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.checkbox,
-                    task.status === "completed" && styles.checkboxChecked,
-                  ]}
-                >
-                  {task.status === "completed" && (
-                    <Ionicons name="checkmark" size={14} color={colors.background} />
-                  )}
-                </View>
-                <View style={styles.taskContent}>
-                  <Text
-                    style={[
-                      styles.taskTitle,
-                      task.status === "completed" && styles.taskTitleDone,
-                    ]}
-                  >
-                    {task.title}
-                  </Text>
-                  <View style={styles.taskMeta}>
-                    <View
+          <View style={{ gap: spacing.lg }}>
+            {(() => {
+              const overdue = tasks.filter(
+                (t) => t.dueDate < todayStr && t.status !== "completed"
+              );
+              const today = tasks.filter((t) => t.dueDate === todayStr);
+              const upcoming = tasks.filter((t) => t.dueDate > todayStr);
+
+              const renderGroup = (label: string, items: typeof tasks, accent?: string) =>
+                items.length === 0 ? null : (
+                  <View style={{ gap: spacing.sm }} key={label}>
+                    <Text
                       style={[
-                        styles.projectBadge,
-                        {
-                          backgroundColor: task.projectColor + "20",
-                          borderColor: task.projectColor,
-                        },
+                        styles.groupLabel,
+                        accent ? { color: accent } : undefined,
                       ]}
                     >
-                      <Text
+                      {label} · {items.length}
+                    </Text>
+                    {items.map((task) => (
+                      <TouchableOpacity
+                        key={task._id}
                         style={[
-                          styles.projectBadgeText,
-                          { color: task.projectColor },
+                          styles.taskItem,
+                          task.dueDate < todayStr &&
+                            task.status !== "completed" &&
+                            styles.taskOverdue,
                         ]}
+                        onPress={() => toggleTask({ taskId: task._id })}
+                        activeOpacity={0.7}
                       >
-                        {task.projectTitle}
-                      </Text>
-                    </View>
-                    {task.dueTime && (
-                      <Text style={styles.taskTime}>{task.dueTime}</Text>
-                    )}
+                        <View
+                          style={[
+                            styles.checkbox,
+                            task.status === "completed" && styles.checkboxChecked,
+                          ]}
+                        >
+                          {task.status === "completed" && (
+                            <Ionicons
+                              name="checkmark"
+                              size={14}
+                              color={colors.background}
+                            />
+                          )}
+                        </View>
+                        <View style={styles.taskContent}>
+                          <Text
+                            style={[
+                              styles.taskTitle,
+                              task.status === "completed" && styles.taskTitleDone,
+                            ]}
+                          >
+                            {task.title}
+                          </Text>
+                          <View style={styles.taskMeta}>
+                            <View
+                              style={[
+                                styles.projectBadge,
+                                {
+                                  backgroundColor: task.projectColor + "20",
+                                  borderColor: task.projectColor,
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.projectBadgeText,
+                                  { color: task.projectColor },
+                                ]}
+                              >
+                                {task.projectTitle}
+                              </Text>
+                            </View>
+                            {task.dueDate !== todayStr && (
+                              <Text style={styles.taskTime}>
+                                {new Date(task.dueDate + "T00:00:00").toLocaleDateString(
+                                  "en-US",
+                                  { month: "short", day: "numeric" }
+                                )}
+                              </Text>
+                            )}
+                            {task.dueTime && (
+                              <Text style={styles.taskTime}>{task.dueTime}</Text>
+                            )}
+                          </View>
+                        </View>
+                        {task.warningLevel !== "green" &&
+                          task.status !== "completed" && (
+                            <View
+                              style={[
+                                styles.warningDot,
+                                {
+                                  backgroundColor: colors[
+                                    task.warningLevel as keyof typeof colors
+                                  ] as string,
+                                },
+                              ]}
+                            />
+                          )}
+                      </TouchableOpacity>
+                    ))}
                   </View>
-                </View>
-                {task.warningLevel !== "green" && task.status !== "completed" && (
-                  <View
-                    style={[
-                      styles.warningDot,
-                      {
-                        backgroundColor: colors[
-                          task.warningLevel as keyof typeof colors
-                        ] as string,
-                      },
-                    ]}
-                  />
-                )}
-              </TouchableOpacity>
-            ))}
+                );
+
+              return (
+                <>
+                  {renderGroup("OVERDUE", overdue, colors.red)}
+                  {renderGroup("TODAY", today)}
+                  {renderGroup("UPCOMING", upcoming, colors.textSecondary)}
+                </>
+              );
+            })()}
           </View>
         )}
 
         {/* Personal Day CTA */}
-        <TouchableOpacity style={styles.personalDayCta}>
+        <TouchableOpacity
+          style={styles.personalDayCta}
+          onPress={() =>
+            Alert.alert(
+              "Personal Day",
+              `You have ${personalDaysRemaining} of ${convexUser?.personalDaysPerMonth ?? 0} personal days remaining this month. Invoking will be available soon.`
+            )
+          }
+        >
           <Ionicons name="umbrella-outline" size={18} color={colors.textSecondary} />
           <Text style={styles.personalDayText}>
             Invoke Personal Day ({personalDaysRemaining} remaining)
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <TaskCreateSheet
+        visible={taskSheetOpen}
+        onClose={() => setTaskSheetOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -427,6 +488,12 @@ const styles = StyleSheet.create({
   },
   noTasksText: { color: colors.textSecondary, fontSize: fontSize.sm },
   taskList: { gap: spacing.sm },
+  groupLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
   taskItem: {
     flexDirection: "row",
     alignItems: "center",

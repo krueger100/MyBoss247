@@ -150,13 +150,25 @@ export const syncUser = mutation({
       .first();
 
     if (existing) {
-      // Keep display name / email in sync with Clerk
+      // Keep display name / email in sync with Clerk.
+      // Only touch avatarUrl if the user has NOT uploaded one through us
+      // (i.e. they have no avatarStorageId — meaning the existing url came
+      // from Clerk anyway, not from our storage).
       const patch: Record<string, unknown> = {};
       if (existing.email !== args.email) patch.email = args.email;
       if (existing.displayName !== args.displayName)
         patch.displayName = args.displayName;
-      if (args.avatarUrl && existing.avatarUrl !== args.avatarUrl)
-        patch.avatarUrl = args.avatarUrl;
+
+      const hasUserUploadedAvatar = !!(existing as any).avatarStorageId;
+      if (!hasUserUploadedAvatar) {
+        if (args.avatarUrl && existing.avatarUrl !== args.avatarUrl) {
+          patch.avatarUrl = args.avatarUrl;
+        } else if (!args.avatarUrl && existing.avatarUrl) {
+          // Clerk default was previously synced — clear it
+          patch.avatarUrl = undefined;
+        }
+      }
+
       if (Object.keys(patch).length > 0) {
         await ctx.db.patch(existing._id, patch);
       }

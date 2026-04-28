@@ -31,10 +31,16 @@ export function useSyncUser() {
         ? Intl.DateTimeFormat().resolvedOptions().timeZone
         : "UTC";
 
+    // Only sync avatar if the user actually uploaded one to Clerk.
+    // Skip Clerk's auto-generated default silhouettes.
+    const isClerkDefault =
+      !clerkUser.hasImage || clerkUser.imageUrl?.includes("/default-");
+    const avatarUrl = isClerkDefault ? undefined : clerkUser.imageUrl;
+
     syncUser({
       email,
       displayName,
-      avatarUrl: clerkUser.imageUrl,
+      avatarUrl,
       timezone,
     })
       .then(() => setSynced(true))

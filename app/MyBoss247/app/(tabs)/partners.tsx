@@ -4,41 +4,28 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
+  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, fontSize, borderRadius } from "../../constants/theme";
 
-const MOCK_PARTNERS = [
-  { id: "1", name: "Alex Chen", handle: "@alexc", streak: 18, completion: 94, avatar: "AC" },
-  { id: "2", name: "Sam Rivera", handle: "@samr", streak: 6, completion: 71, avatar: "SR" },
-];
-
-const MOCK_CHALLENGES = [
-  {
-    id: "1",
-    title: "Q2 Sprint",
-    opponent: "Alex Chen",
-    stake: 250,
-    myProgress: 72,
-    opponentProgress: 65,
-    daysLeft: 4,
-  },
-];
-
 export default function PartnersScreen() {
+  const onInvite = () => {
+    Alert.alert("Coming soon", "Partner invitations will arrive in Phase 6.");
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.title}>Partners</Text>
-        <TouchableOpacity style={styles.addBtn}>
+        <TouchableOpacity style={styles.addBtn} onPress={onInvite}>
           <Ionicons name="person-add" size={18} color={colors.background} />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* VIP banner */}
-        <TouchableOpacity style={styles.vipBanner}>
+        <TouchableOpacity style={styles.vipBanner} onPress={onInvite}>
           <View style={styles.vipBadge}>
             <Ionicons name="diamond" size={14} color="#FFD700" />
             <Text style={styles.vipBadgeText}>VIP HIGH STAKES</Text>
@@ -49,79 +36,17 @@ export default function PartnersScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* Active challenge */}
-        <Text style={styles.sectionTitle}>Active Challenges</Text>
-        {MOCK_CHALLENGES.map((c) => (
-          <TouchableOpacity key={c.id} style={styles.challengeCard}>
-            <View style={styles.challengeHeader}>
-              <Text style={styles.challengeTitle}>{c.title}</Text>
-              <Text style={styles.stake}>${c.stake}</Text>
-            </View>
-            <Text style={styles.challengeOpponent}>vs {c.opponent}</Text>
-
-            <View style={styles.versusRow}>
-              <View style={{ flex: 1 }}>
-                <View style={styles.progressRow}>
-                  <Text style={styles.progressName}>You</Text>
-                  <Text style={[styles.progressPct, { color: colors.primary }]}>
-                    {c.myProgress}%
-                  </Text>
-                </View>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      { width: `${c.myProgress}%`, backgroundColor: colors.primary },
-                    ]}
-                  />
-                </View>
-              </View>
-
-              <View style={{ flex: 1, marginTop: spacing.sm }}>
-                <View style={styles.progressRow}>
-                  <Text style={styles.progressName}>{c.opponent.split(" ")[0]}</Text>
-                  <Text style={styles.progressPct}>{c.opponentProgress}%</Text>
-                </View>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      { width: `${c.opponentProgress}%`, backgroundColor: colors.orange },
-                    ]}
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.challengeFooter}>
-              <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.daysLeft}>{c.daysLeft} days left</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-
-        {/* Partners */}
-        <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Your Partners</Text>
-          <TouchableOpacity>
-            <Text style={styles.sectionAction}>+ Invite</Text>
+        <View style={styles.emptyState}>
+          <Ionicons name="people-outline" size={56} color={colors.textMuted} />
+          <Text style={styles.emptyTitle}>No partners yet</Text>
+          <Text style={styles.emptyText}>
+            Invite an entrepreneur to keep you accountable. Compete in challenges
+            and put real money on the line.
+          </Text>
+          <TouchableOpacity style={styles.emptyCta} onPress={onInvite}>
+            <Text style={styles.emptyCtaText}>Invite a Partner</Text>
           </TouchableOpacity>
         </View>
-        {MOCK_PARTNERS.map((p) => (
-          <TouchableOpacity key={p.id} style={styles.partnerCard}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{p.avatar}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.partnerName}>{p.name}</Text>
-              <Text style={styles.partnerHandle}>{p.handle}</Text>
-            </View>
-            <View style={styles.partnerStats}>
-              <Text style={styles.partnerStat}>🔥 {p.streak}</Text>
-              <Text style={styles.partnerStat}>{p.completion}%</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -163,80 +88,38 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     marginBottom: spacing.sm,
   },
-  vipBadgeText: { color: "#FFD700", fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  vipBadgeText: {
+    color: "#FFD700",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
   vipTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
   vipSub: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 4 },
-  sectionTitle: {
-    color: colors.text,
-    fontSize: fontSize.lg,
-    fontWeight: "700",
-    marginTop: spacing.sm,
-  },
-  sectionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: spacing.sm,
-  },
-  sectionAction: { color: colors.primary, fontSize: fontSize.sm, fontWeight: "600" },
-  challengeCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  challengeHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  challengeTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: "700" },
-  stake: { color: colors.primary, fontSize: fontSize.md, fontWeight: "700" },
-  challengeOpponent: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
-  versusRow: { marginTop: spacing.md },
-  progressRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  progressName: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: "600" },
-  progressPct: { color: colors.text, fontSize: fontSize.xs, fontWeight: "700" },
-  progressBar: {
-    height: 6,
-    backgroundColor: colors.surfaceTertiary,
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  progressFill: { height: "100%" },
-  challengeFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: spacing.md,
-  },
-  daysLeft: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: "600" },
-  partnerCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceTertiary,
+  emptyState: {
     alignItems: "center",
     justifyContent: "center",
+    padding: spacing.xxl,
+    gap: spacing.md,
   },
-  avatarText: { color: colors.text, fontSize: fontSize.sm, fontWeight: "700" },
-  partnerName: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
-  partnerHandle: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
-  partnerStats: { flexDirection: "row", gap: spacing.md },
-  partnerStat: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: "600" },
+  emptyTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
+  emptyText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  emptyCta: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.sm,
+  },
+  emptyCtaText: {
+    color: colors.background,
+    fontSize: fontSize.md,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
 });

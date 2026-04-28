@@ -7,6 +7,15 @@ export default defineSchema({
     email: v.string(),
     displayName: v.string(),
     avatarUrl: v.optional(v.string()),
+    avatarStorageId: v.optional(v.id("_storage")),
+    avatarHistory: v.optional(
+      v.array(
+        v.object({
+          url: v.string(),
+          storageId: v.id("_storage"),
+        })
+      )
+    ),
     timezone: v.string(),
     inviteCode: v.string(),
     bossSettings: v.object({

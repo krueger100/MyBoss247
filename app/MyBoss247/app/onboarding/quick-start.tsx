@@ -52,31 +52,31 @@ export default function QuickStartScreen() {
   const createTask = useMutation(api.tasks.create);
 
   const [projectName, setProjectName] = useState("");
-  const [annualPotential, setAnnualPotential] = useState("");
+  const [potentialAmount, setPotentialAmount] = useState("");
+  const [period, setPeriod] = useState<"annual" | "monthly">("annual");
   const [personality, setPersonality] = useState<Personality>("tough_coach");
   const [loading, setLoading] = useState(false);
 
-  const dailyValue = (() => {
-    const n = parseFloat(annualPotential.replace(/[^\d.]/g, ""));
+  const annualNumber = (() => {
+    const n = parseFloat(potentialAmount.replace(/[^\d.]/g, ""));
     if (!n || isNaN(n)) return 0;
-    return Math.round(n / 365);
+    return period === "monthly" ? n * 12 : n;
   })();
+  const dailyValue = annualNumber > 0 ? Math.round(annualNumber / 365) : 0;
 
   const todayStr = new Date().toISOString().split("T")[0];
 
   const onContinue = async () => {
-    if (!projectName.trim() || !annualPotential || dailyValue === 0) {
-      Alert.alert("Missing info", "Fill in your project name and annual potential.");
+    if (!projectName.trim() || !potentialAmount || dailyValue === 0) {
+      Alert.alert("Missing info", "Fill in your project name and earning potential.");
       return;
     }
     setLoading(true);
     try {
-      const annual = parseFloat(annualPotential.replace(/[^\d.]/g, ""));
-
-      // Create the first project
+      // Create the first project (always store the annualised value)
       const projectId = await createProject({
         title: projectName.trim(),
-        annualPotential: annual,
+        annualPotential: annualNumber,
       });
 
       // Seed 3 starter tasks (placeholder until OpenAI is wired)
@@ -134,25 +134,80 @@ export default function QuickStartScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>ANNUAL EARNING POTENTIAL</Text>
+          <Text style={styles.label}>EARNING POTENTIAL</Text>
           <Text style={styles.help}>
-            What could this project realistically earn per year if you execute?
+            What could this project realistically earn if you execute?
           </Text>
+
+          <View style={styles.periodToggle}>
+            <TouchableOpacity
+              style={[
+                styles.periodBtn,
+                period === "annual" && styles.periodBtnActive,
+              ]}
+              onPress={() => setPeriod("annual")}
+            >
+              <Text
+                style={[
+                  styles.periodText,
+                  period === "annual" && styles.periodTextActive,
+                ]}
+              >
+                Per Year
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.periodBtn,
+                period === "monthly" && styles.periodBtnActive,
+              ]}
+              onPress={() => setPeriod("monthly")}
+            >
+              <Text
+                style={[
+                  styles.periodText,
+                  period === "monthly" && styles.periodTextActive,
+                ]}
+              >
+                Per Month
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.currencyInput}>
             <Text style={styles.currencySymbol}>$</Text>
             <TextInput
               style={[styles.input, styles.inputCurrency]}
-              placeholder="10,000,000"
+              placeholder={period === "annual" ? "10,000,000" : "100,000"}
               placeholderTextColor={colors.textMuted}
-              value={annualPotential}
-              onChangeText={(v) => setAnnualPotential(v.replace(/[^\d,]/g, ""))}
+              value={potentialAmount}
+              onChangeText={(v) => setPotentialAmount(v.replace(/[^\d,]/g, ""))}
               keyboardType="number-pad"
             />
           </View>
           {dailyValue > 0 && (
-            <Text style={styles.dailyValue}>
-              = ${dailyValue.toLocaleString()}/day at stake
-            </Text>
+            <View style={styles.breakdown}>
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>DAILY</Text>
+                <Text style={styles.breakdownValueAccent}>
+                  ${dailyValue.toLocaleString()}
+                </Text>
+              </View>
+              <View style={styles.breakdownDivider} />
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>MONTHLY</Text>
+                <Text style={styles.breakdownValue}>
+                  ${Math.round(annualNumber / 12).toLocaleString()}
+                </Text>
+              </View>
+              <View style={styles.breakdownDivider} />
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>YEARLY</Text>
+                <Text style={styles.breakdownValue}>
+                  ${annualNumber.toLocaleString()}
+                </Text>
+              </View>
+            </View>
           )}
         </View>
 
@@ -227,6 +282,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  periodToggle: {
+    flexDirection: "row",
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: 4,
+    marginBottom: spacing.xs,
+  },
+  periodBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: "center",
+    borderRadius: borderRadius.sm,
+  },
+  periodBtnActive: { backgroundColor: colors.surfaceTertiary },
+  periodText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: "600",
+  },
+  periodTextActive: { color: colors.text },
   currencyInput: { position: "relative" },
   currencySymbol: {
     position: "absolute",
@@ -243,6 +318,41 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: "700",
     marginTop: 4,
+  },
+  breakdown: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.xs,
+  },
+  breakdownRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+  breakdownLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
+  breakdownValue: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: "700",
+  },
+  breakdownValueAccent: {
+    color: colors.green,
+    fontSize: fontSize.md,
+    fontWeight: "800",
+  },
+  breakdownDivider: {
+    height: 1,
+    backgroundColor: colors.borderLight,
   },
   personalityCard: {
     flexDirection: "row",

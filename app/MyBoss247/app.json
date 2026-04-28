@@ -15,7 +15,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bossmode.app"
+      "bundleIdentifier": "com.bossmode.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Boss Mode uses your camera to let you take a profile photo.",
+        "NSPhotoLibraryUsageDescription": "Boss Mode accesses your photo library so you can pick a profile picture.",
+        "NSPhotoLibraryAddUsageDescription": "Boss Mode saves the photo you take as your profile picture."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -33,7 +38,14 @@
       "expo-router",
       "expo-font",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Boss Mode accesses your photo library so you can pick a profile picture.",
+          "cameraPermission": "Boss Mode uses your camera to let you take a profile photo."
+        }
+      ]
     ]
   }
 }

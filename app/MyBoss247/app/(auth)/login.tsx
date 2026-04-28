@@ -44,14 +44,62 @@ export default function LoginScreen() {
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
         router.replace("/(tabs)");
-      } else {
-        Alert.alert("Sign In", "Additional verification required.");
+        return;
       }
-    } catch (err: any) {
+
+      // Email-code first factor — Clerk wants the user to verify via email
+      if (result.status === "needs_first_factor") {
+        const emailFactor = result.supportedFirstFactors?.find(
+          (f: any) => f.strategy === "email_code"
+        );
+        if (emailFactor) {
+          await signIn.prepareFirstFactor({
+            strategy: "email_code",
+            emailAddressId: (emailFactor as any).emailAddressId,
+          });
+          Alert.alert(
+            "Email verification required",
+            "We sent a 6-digit code to your email. Use 'Forgot password' for now or contact support to disable email verification on every login."
+          );
+          return;
+        }
+        Alert.alert(
+          "Sign In",
+          "Your account requires extra verification. Try the email-link sign-in or contact support."
+        );
+        return;
+      }
+
+      if (result.status === "needs_second_factor") {
+        Alert.alert(
+          "Two-factor required",
+          "Your account has 2FA enabled. 2FA support isn't built yet — disable it in your Clerk profile to sign in."
+        );
+        return;
+      }
+
+      // Fallback for any other intermediate status
       Alert.alert(
-        "Sign In Failed",
-        err.errors?.[0]?.longMessage || "Check your email and password."
+        "Sign In",
+        `Additional verification required (status: ${result.status}).`
       );
+    } catch (err: any) {
+      const code = err.errors?.[0]?.code;
+      if (code === "form_password_incorrect") {
+        Alert.alert("Wrong password", "Check your password and try again.");
+      } else if (code === "form_identifier_not_found") {
+        Alert.alert(
+          "Account not found",
+          "No account with that email. Sign up first."
+        );
+      } else {
+        Alert.alert(
+          "Sign In Failed",
+          err.errors?.[0]?.longMessage ||
+            err.errors?.[0]?.message ||
+            "Check your email and password."
+        );
+      }
     } finally {
       setLoading(false);
     }
