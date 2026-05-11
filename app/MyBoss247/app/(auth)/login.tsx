@@ -27,6 +27,9 @@ export default function LoginScreen() {
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [needs2FA, setNeeds2FA] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [useBackupCode, setUseBackupCode] = useState(false);
 
   const { startOAuthFlow: startGoogleOAuth } = useOAuth({ strategy: "oauth_google" });
   const { startOAuthFlow: startAppleOAuth } = useOAuth({ strategy: "oauth_apple" });
@@ -71,10 +74,7 @@ export default function LoginScreen() {
       }
 
       if (result.status === "needs_second_factor") {
-        Alert.alert(
-          "Two-factor required",
-          "Your account has 2FA enabled. 2FA support isn't built yet — disable it in your Clerk profile to sign in."
-        );
+        setNeeds2FA(true);
         return;
       }
 
@@ -105,6 +105,34 @@ export default function LoginScreen() {
     }
   }, [isLoaded, email, password]);
 
+  const onVerify2FA = useCallback(async () => {
+    if (!isLoaded || !twoFactorCode.trim()) return;
+    setLoading(true);
+    try {
+      const strategy = useBackupCode ? "backup_code" : "totp";
+      const result = await signIn.attemptSecondFactor({
+        strategy,
+        code: twoFactorCode.trim(),
+      } as any);
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.replace("/(tabs)");
+      } else {
+        Alert.alert("Verification incomplete", `Status: ${result.status}`);
+      }
+    } catch (err: any) {
+      Alert.alert(
+        "Verification failed",
+        err.errors?.[0]?.longMessage ||
+          err.errors?.[0]?.message ||
+          "Invalid code. Try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [isLoaded, twoFactorCode, useBackupCode]);
+
   const onOAuthLogin = useCallback(
     async (startFlow: typeof startGoogleOAuth) => {
       try {
@@ -119,6 +147,77 @@ export default function LoginScreen() {
     },
     []
   );
+
+  if (needs2FA) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Two-Factor</Text>
+            <Text style={styles.subtitle}>
+              {useBackupCode
+                ? "Enter one of your saved backup codes"
+                : "Open your authenticator app and enter the 6-digit code"}
+            </Text>
+          </View>
+
+          <View style={styles.form}>
+            <TextInput
+              style={styles.input}
+              placeholder={useBackupCode ? "Backup code" : "123 456"}
+              placeholderTextColor={colors.textMuted}
+              value={twoFactorCode}
+              onChangeText={setTwoFactorCode}
+              keyboardType={useBackupCode ? "default" : "number-pad"}
+              autoComplete="one-time-code"
+              autoFocus
+              maxLength={useBackupCode ? 16 : 6}
+            />
+
+            <TouchableOpacity
+              style={[styles.primaryButton, loading && styles.buttonDisabled]}
+              onPress={onVerify2FA}
+              disabled={loading || !twoFactorCode.trim()}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.background} />
+              ) : (
+                <Text style={styles.primaryButtonText}>Verify</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setUseBackupCode((v) => !v);
+                setTwoFactorCode("");
+              }}
+              style={{ alignItems: "center", marginTop: spacing.md }}
+            >
+              <Text style={styles.linkText}>
+                {useBackupCode
+                  ? "Use authenticator code instead"
+                  : "Use a backup code instead"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setNeeds2FA(false);
+                setTwoFactorCode("");
+                setUseBackupCode(false);
+              }}
+              style={{ alignItems: "center", marginTop: spacing.sm }}
+            >
+              <Text style={styles.rowText}>Back to sign in</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
