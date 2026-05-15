@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import {
   View,
   Text,
+  TextInput,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -9,17 +10,25 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
+import type { Id } from "../../convex/_generated/dataModel";
 import { useRouter } from "expo-router";
 import { api } from "../../convex/_generated/api";
+import { ProjectCreateSheet } from "../../components/ProjectCreateSheet";
 import { colors, spacing, fontSize, borderRadius } from "../../constants/theme";
 
 export default function ProjectsScreen() {
   const router = useRouter();
   const [view, setView] = useState<"projects" | "tasks">("projects");
+  const [projectSheetOpen, setProjectSheetOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<any>(null);
+  const [search, setSearch] = useState("");
+  const [reorderMode, setReorderMode] = useState(false);
+  const reorderProjects = useMutation(api.projects.reorder);
 
   const projects = useQuery(api.projects.list);
   const todayStr = new Date().toISOString().split("T")[0];
+  const allTasks = useQuery(api.tasks.listAll);
   const todayTasks = useQuery(api.tasks.today, { dueDate: todayStr });
 
   const taskCountsByProject = useMemo(() => {
@@ -40,12 +49,32 @@ export default function ProjectsScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.title}>Projects</Text>
+        <View style={{ flexDirection: "row", gap: spacing.sm }}>
+          {view === "projects" && projects && projects.length > 1 && (
+            <TouchableOpacity
+              style={[
+                styles.reorderBtn,
+                reorderMode && styles.reorderBtnActive,
+              ]}
+              onPress={() => setReorderMode((v) => !v)}
+            >
+              <Ionicons
+                name={reorderMode ? "checkmark" : "swap-vertical"}
+                size={18}
+                color={reorderMode ? colors.background : colors.text}
+              />
+            </TouchableOpacity>
+          )}
         <TouchableOpacity
           style={styles.addBtn}
-          onPress={() => router.push("/onboarding/quick-start")}
+          onPress={() => {
+            setEditingProject(null);
+            setProjectSheetOpen(true);
+          }}
         >
           <Ionicons name="add" size={22} color={colors.background} />
         </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.segment}>
@@ -87,23 +116,51 @@ export default function ProjectsScreen() {
             (projects.length === 0 ? (
               <EmptyState
                 icon="briefcase-outline"
-                title="No projects yet"
-                description="The Boss needs something to manage. Create your first project to get to work."
+                title="No projects on the board"
+                description="I can't manage what doesn't exist. Spin one up so we can get to work."
                 actionLabel="Create Project"
-                onAction={() => router.push("/onboarding/quick-start")}
+                onAction={() => {
+                  setEditingProject(null);
+                  setProjectSheetOpen(true);
+                }}
               />
             ) : (
-              projects.map((p) => {
+              projects.map((p, idx) => {
                 const daily = Math.round(p.annualPotential / 365);
                 const counts = taskCountsByProject[p._id] ?? {
                   today: 0,
                   total: 0,
                 };
+
+                const moveProject = async (direction: -1 | 1) => {
+                  const next = [...projects];
+                  const target = idx + direction;
+                  if (target < 0 || target >= next.length) return;
+                  [next[idx], next[target]] = [next[target], next[idx]];
+                  await reorderProjects({
+                    orderedIds: next.map((x) => x._id as Id<"projects">),
+                  });
+                };
+
                 return (
                   <TouchableOpacity
                     key={p._id}
                     style={styles.projectCard}
-                    activeOpacity={0.8}
+                    activeOpacity={reorderMode ? 1 : 0.8}
+                    disabled={reorderMode}
+                    onPress={() => router.push(`/project/${p._id}`)}
+                    onLongPress={() => {
+                      setEditingProject({
+                        _id: p._id,
+                        title: p.title,
+                        description: p.description,
+                        icon: p.icon,
+                        colour: p.colour,
+                        annualPotential: p.annualPotential,
+                      });
+                      setProjectSheetOpen(true);
+                    }}
+                    delayLongPress={350}
                   >
                     <View style={styles.projectHeader}>
                       <View style={styles.projectLeft}>
@@ -122,11 +179,50 @@ export default function ProjectsScreen() {
                           </Text>
                         </View>
                       </View>
-                      <Ionicons
-                        name="reorder-three"
-                        size={22}
-                        color={colors.textMuted}
-                      />
+                      {reorderMode ? (
+                        <View style={styles.reorderArrows}>
+                          <TouchableOpacity
+                            style={[
+                              styles.arrowBtn,
+                              idx === 0 && styles.arrowBtnDisabled,
+                            ]}
+                            disabled={idx === 0}
+                            onPress={() => moveProject(-1)}
+                          >
+                            <Ionicons
+                              name="chevron-up"
+                              size={20}
+                              color={
+                                idx === 0 ? colors.textMuted : colors.text
+                              }
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[
+                              styles.arrowBtn,
+                              idx === projects.length - 1 && styles.arrowBtnDisabled,
+                            ]}
+                            disabled={idx === projects.length - 1}
+                            onPress={() => moveProject(1)}
+                          >
+                            <Ionicons
+                              name="chevron-down"
+                              size={20}
+                              color={
+                                idx === projects.length - 1
+                                  ? colors.textMuted
+                                  : colors.text
+                              }
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <Ionicons
+                          name="reorder-three"
+                          size={22}
+                          color={colors.textMuted}
+                        />
+                      )}
                     </View>
 
                     <View style={styles.progressBar}>
@@ -155,49 +251,100 @@ export default function ProjectsScreen() {
             ))}
 
           {view === "tasks" &&
-            (todayTasks === undefined ? (
+            (allTasks === undefined ? (
               <ActivityIndicator color={colors.primary} />
-            ) : todayTasks.length === 0 ? (
-              <EmptyState
-                icon="list-outline"
-                title="No tasks today"
-                description="Tasks across all your projects will appear here."
-              />
             ) : (
-              todayTasks.map((t) => (
-                <View key={t._id} style={styles.taskCard}>
-                  <View
-                    style={[
-                      styles.dot,
-                      { backgroundColor: t.projectColor },
-                    ]}
+              <>
+                <View style={styles.searchWrap}>
+                  <Ionicons
+                    name="search"
+                    size={18}
+                    color={colors.textMuted}
+                    style={{ position: "absolute", left: spacing.md, top: 14, zIndex: 1 }}
                   />
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={[
-                        styles.taskTitle,
-                        t.status === "completed" && styles.taskDone,
-                      ]}
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search tasks..."
+                    placeholderTextColor={colors.textMuted}
+                    value={search}
+                    onChangeText={setSearch}
+                  />
+                  {search.length > 0 && (
+                    <TouchableOpacity
+                      style={{ position: "absolute", right: spacing.md, top: 14 }}
+                      onPress={() => setSearch("")}
                     >
-                      {t.title}
-                    </Text>
-                    <Text style={styles.taskMeta}>
-                      {t.projectTitle}
-                      {t.dueTime ? ` · ${t.dueTime}` : ""}
-                    </Text>
-                  </View>
-                  {t.status === "completed" && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={20}
-                      color={colors.green}
-                    />
+                      <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                    </TouchableOpacity>
                   )}
                 </View>
-              ))
+
+                {(() => {
+                  const q = search.trim().toLowerCase();
+                  const filtered = q
+                    ? allTasks.filter((t) =>
+                        t.title.toLowerCase().includes(q) ||
+                        (t.description && t.description.toLowerCase().includes(q)) ||
+                        t.projectTitle.toLowerCase().includes(q)
+                      )
+                    : allTasks;
+
+                  if (filtered.length === 0) {
+                    return (
+                      <EmptyState
+                        icon={q ? "search" : "list-outline"}
+                        title={q ? "Nothing matches" : "Empty queue"}
+                        description={
+                          q
+                            ? `Nothing matches "${search}". Try shorter keywords.`
+                            : "I need work to manage. Create a task from the Dashboard."
+                        }
+                      />
+                    );
+                  }
+                  return filtered.map((t) => (
+                    <View key={t._id} style={styles.taskCard}>
+                      <View style={[styles.dot, { backgroundColor: t.projectColor }]} />
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[
+                            styles.taskTitle,
+                            t.status === "completed" && styles.taskDone,
+                          ]}
+                        >
+                          {t.title}
+                        </Text>
+                        <Text style={styles.taskMeta}>
+                          {t.projectTitle} ·{" "}
+                          {new Date(t.dueDate + "T00:00:00").toLocaleDateString(
+                            "en-US",
+                            { month: "short", day: "numeric" }
+                          )}
+                          {t.dueTime ? ` · ${t.dueTime}` : ""}
+                        </Text>
+                      </View>
+                      {t.status === "completed" && (
+                        <Ionicons name="checkmark-circle" size={20} color={colors.green} />
+                      )}
+                      {t.status === "overdue" && (
+                        <Ionicons name="alert-circle" size={20} color={colors.red} />
+                      )}
+                    </View>
+                  ));
+                })()}
+              </>
             ))}
         </ScrollView>
       )}
+
+      <ProjectCreateSheet
+        visible={projectSheetOpen}
+        onClose={() => {
+          setProjectSheetOpen(false);
+          setEditingProject(null);
+        }}
+        editingProject={editingProject}
+      />
     </SafeAreaView>
   );
 }
@@ -343,5 +490,41 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: "700",
     letterSpacing: 1,
+  },
+  reorderBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reorderBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  reorderArrows: { flexDirection: "row", gap: 4 },
+  arrowBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  arrowBtnDisabled: { opacity: 0.3 },
+  searchWrap: { position: "relative" },
+  searchInput: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingLeft: 40,
+    paddingRight: 40,
+    paddingVertical: 12,
+    color: colors.text,
+    fontSize: fontSize.md,
   },
 });

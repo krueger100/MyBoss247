@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { ClerkProvider, ClerkLoaded, useAuth } from "@clerk/clerk-expo";
@@ -13,6 +13,9 @@ import tamaguiConfig from "../tamagui.config";
 import { tokenCache } from "../lib/tokenCache";
 import { useSyncUser } from "../hooks/useSyncUser";
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { usePushNotifications } from "../hooks/usePushNotifications";
+import { CheckInToast } from "../components/CheckInToast";
+import { CheckInSheet } from "../components/CheckInSheet";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -36,6 +39,9 @@ function AuthenticatedLayout() {
   const { isSignedIn, isLoaded: clerkLoaded } = useAuth();
   const { synced } = useSyncUser();
   const convexUser = useCurrentUser();
+  usePushNotifications();
+
+  const [toastCheckIn, setToastCheckIn] = useState<any>(null);
   const segments = useSegments();
   const router = useRouter();
 
@@ -76,6 +82,16 @@ function AuthenticatedLayout() {
     <>
       <Slot />
       <StatusBar style="light" />
+      {isSignedIn && synced && (
+        <>
+          <CheckInToast onTap={setToastCheckIn} />
+          <CheckInSheet
+            visible={!!toastCheckIn}
+            checkIn={toastCheckIn}
+            onClose={() => setToastCheckIn(null)}
+          />
+        </>
+      )}
     </>
   );
 }

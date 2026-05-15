@@ -59,6 +59,7 @@ export default defineSchema({
     currentStreak: v.number(),
     longestStreak: v.number(),
     onboardingStep: v.optional(v.string()),
+    expoPushToken: v.optional(v.string()),
   })
     .index("by_clerkId", ["clerkId"])
     .index("by_email", ["email"])
@@ -209,12 +210,24 @@ export default defineSchema({
       v.literal("warning"),
       v.literal("inbox")
     ),
-  }).index("by_userId", ["userId"]),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("responded"),
+      v.literal("missed")
+    ),
+    scheduledFor: v.number(),
+    respondedAt: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_status", ["userId", "status"]),
 
   chatMessages: defineTable({
     userId: v.id("users"),
     role: v.union(v.literal("boss"), v.literal("employee")),
     content: v.string(),
+    status: v.optional(
+      v.union(v.literal("sending"), v.literal("sent"), v.literal("failed"))
+    ),
   }).index("by_userId", ["userId"]),
 
   performanceReviews: defineTable({

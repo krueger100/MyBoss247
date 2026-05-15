@@ -98,6 +98,32 @@ export const updateUser = mutation({
     avatarUrl: v.optional(v.string()),
     timezone: v.optional(v.string()),
     onboardingStep: v.optional(v.string()),
+    bossPersonality: v.optional(
+      v.union(
+        v.literal("drill_sergeant"),
+        v.literal("tough_coach"),
+        v.literal("supportive_manager")
+      )
+    ),
+    checkinTimes: v.optional(
+      v.object({
+        morning: v.string(),
+        midday: v.string(),
+        afternoon: v.string(),
+        evening: v.string(),
+      })
+    ),
+    inboxFrequency: v.optional(
+      v.union(
+        v.literal("off"),
+        v.literal("light"),
+        v.literal("normal"),
+        v.literal("intense")
+      )
+    ),
+    workingHoursStart: v.optional(v.string()),
+    workingHoursEnd: v.optional(v.string()),
+    personalDaysPerMonth: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -105,20 +131,46 @@ export const updateUser = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) =>
-        q.eq("clerkId", identity.subject)
-      )
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
       .first();
-
     if (!user) throw new Error("User not found");
 
-    // Build patch object with only provided fields
     const patch: Record<string, unknown> = {};
     if (args.displayName !== undefined) patch.displayName = args.displayName;
     if (args.avatarUrl !== undefined) patch.avatarUrl = args.avatarUrl;
     if (args.timezone !== undefined) patch.timezone = args.timezone;
     if (args.onboardingStep !== undefined)
       patch.onboardingStep = args.onboardingStep;
+    if (args.personalDaysPerMonth !== undefined)
+      patch.personalDaysPerMonth = args.personalDaysPerMonth;
+
+    // Boss settings updates — merge into existing object
+    const settingsChanged =
+      args.bossPersonality !== undefined ||
+      args.checkinTimes !== undefined ||
+      args.inboxFrequency !== undefined ||
+      args.workingHoursStart !== undefined ||
+      args.workingHoursEnd !== undefined;
+    if (settingsChanged) {
+      patch.bossSettings = {
+        ...user.bossSettings,
+        ...(args.bossPersonality !== undefined && {
+          personality: args.bossPersonality,
+        }),
+        ...(args.checkinTimes !== undefined && {
+          checkinTimes: args.checkinTimes,
+        }),
+        ...(args.inboxFrequency !== undefined && {
+          inboxFrequency: args.inboxFrequency,
+        }),
+        ...(args.workingHoursStart !== undefined && {
+          workingHoursStart: args.workingHoursStart,
+        }),
+        ...(args.workingHoursEnd !== undefined && {
+          workingHoursEnd: args.workingHoursEnd,
+        }),
+      };
+    }
 
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(user._id, patch);
@@ -207,6 +259,111 @@ export const syncUser = mutation({
     });
 
     return userId;
+  },
+});
+
+/**
+ * Sign the Employment Contract. Persists timestamp on the user.
+ */
+export const signContract = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    if (user.contractSignedAt) {
+      return user.contractSignedAt; // idempotent
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(user._id, { contractSignedAt: now });
+
+    // Drop a Boss confirmation into chat
+    await ctx.db.insert("chatMessages", {
+      userId: user._id,
+      role: "boss",
+      content: "Contract signed. Welcome aboard. Now show me you're serious.",
+      status: "sent",
+    });
+
+    return now;
+  },
+});
+
+/**
+ * Count completed tasks for the current user. Used to detect when the
+ * progressive onboarding contract prompt should fire (after task #3).
+ */
+export const completedTaskCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return 0;
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user) return 0;
+
+    const tasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_userId_status", (q) =>
+        q.eq("userId", user._id).eq("status", "completed")
+      )
+      .collect();
+    return tasks.length;
+  },
+});
+
+/**
+ * Invoke a personal day for today. Decrements personalDaysRemaining
+ * and logs to personalDaysLog. Idempotent — can't invoke twice on same day.
+ */
+export const invokePersonalDay = mutation({
+  args: { reason: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    if (user.personalDaysRemaining <= 0) {
+      throw new Error("No personal days remaining this month.");
+    }
+
+    // Already invoked today?
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    const existing = await ctx.db
+      .query("personalDaysLog")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .filter((q) => q.eq(q.field("dateUsed"), todayStr))
+      .first();
+    if (existing) {
+      throw new Error("Personal day already invoked for today.");
+    }
+
+    await ctx.db.insert("personalDaysLog", {
+      userId: user._id,
+      dateUsed: todayStr,
+      reason: args.reason,
+      streakProtected: user.currentStreak,
+    });
+
+    await ctx.db.patch(user._id, {
+      personalDaysRemaining: user.personalDaysRemaining - 1,
+    });
+
+    return { remaining: user.personalDaysRemaining - 1 };
   },
 });
 

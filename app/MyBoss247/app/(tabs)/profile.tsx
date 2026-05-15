@@ -106,13 +106,13 @@ export default function ProfileScreen() {
           icon: "construct-outline",
           label: "Boss Settings",
           value: personality,
-          onPress: () => notReady("Boss Settings"),
+          onPress: () => router.push("/settings/boss"),
         },
         {
           icon: "document-text-outline",
           label: "My Contract",
           value: contractStatus,
-          onPress: () => notReady("Employment Contract"),
+          onPress: () => router.push("/contract"),
         },
         {
           icon: "umbrella-outline",
@@ -156,13 +156,17 @@ export default function ProfileScreen() {
         {
           icon: "stats-chart-outline",
           label: "Lifetime Stats",
-          onPress: () => notReady("Lifetime stats"),
+          onPress: () => router.push("/settings/stats"),
+        },
+        {
+          icon: "trophy-outline",
+          label: "Achievements",
+          onPress: () => router.push("/settings/achievements"),
         },
         {
           icon: "calendar-outline",
           label: "Performance Reviews",
-          value: "None yet",
-          onPress: () => notReady("Performance reviews"),
+          onPress: () => router.push("/reviews"),
         },
       ],
     },
@@ -188,17 +192,17 @@ export default function ProfileScreen() {
         {
           icon: "notifications-outline",
           label: "Notifications",
-          onPress: () => notReady("Notification settings"),
+          onPress: () => router.push("/settings/notifications"),
         },
         {
           icon: "help-circle-outline",
           label: "Help & Support",
-          onPress: () => notReady("Help & Support"),
+          onPress: () => router.push("/settings/help"),
         },
         {
           icon: "document-outline",
           label: "Terms & Privacy",
-          onPress: () => notReady("Terms & Privacy"),
+          onPress: () => router.push("/settings/legal"),
         },
         {
           icon: "log-out-outline",

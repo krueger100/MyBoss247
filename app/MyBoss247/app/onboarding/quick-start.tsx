@@ -97,8 +97,10 @@ export default function QuickStartScreen() {
         )
       );
 
-      // TODO: also persist Boss personality to user.bossSettings
-      await updateUser({ onboardingStep: "done" });
+      await updateUser({
+        onboardingStep: "done",
+        bossPersonality: personality,
+      });
       router.replace("/(tabs)");
     } catch (err: any) {
       Alert.alert("Error", err?.message || "Something went wrong.");

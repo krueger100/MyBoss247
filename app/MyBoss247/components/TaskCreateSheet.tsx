@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -65,27 +65,58 @@ export function TaskCreateSheet({
   visible,
   onClose,
   defaultProjectId,
+  editingTask,
 }: {
   visible: boolean;
   onClose: () => void;
   defaultProjectId?: string;
+  editingTask?: {
+    _id: string;
+    title: string;
+    description?: string;
+    projectId: string;
+    dueDate: string;
+    dueTime?: string;
+    priority: Priority;
+  };
 }) {
   const insets = useSafeAreaInsets();
   const projects = useQuery(api.projects.list);
+  const challenges = useQuery(api.challenges.list);
   const createTask = useMutation(api.tasks.create);
+  const updateTask = useMutation(api.tasks.update);
+  const removeTask = useMutation(api.tasks.remove);
+  const isEditing = !!editingTask;
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [projectId, setProjectId] = useState<string | undefined>(defaultProjectId);
-  const [dueDate, setDueDate] = useState<string>(dateToYMD(new Date()));
-  const [dueTime, setDueTime] = useState<string | undefined>();
-  const [priority, setPriority] = useState<Priority>("medium");
+  // Filter challenges to active ones I'm participating in
+  const activeChallenges = (challenges ?? []).filter(
+    (c) => c?.status === "active"
+  );
+
+  const [title, setTitle] = useState(editingTask?.title ?? "");
+  const [description, setDescription] = useState(editingTask?.description ?? "");
+  const [projectId, setProjectId] = useState<string | undefined>(
+    editingTask?.projectId ?? defaultProjectId
+  );
+  const [dueDate, setDueDate] = useState<string>(
+    editingTask?.dueDate ?? dateToYMD(new Date())
+  );
+  const [dueTime, setDueTime] = useState<string | undefined>(
+    editingTask?.dueTime
+  );
+  const [priority, setPriority] = useState<Priority>(
+    editingTask?.priority ?? "medium"
+  );
   const [loading, setLoading] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [hourInput, setHourInput] = useState("");
   const [minuteInput, setMinuteInput] = useState("");
   const [periodInput, setPeriodInput] = useState<"AM" | "PM">("AM");
   const [showCustomTime, setShowCustomTime] = useState(false);
+  const [selectedChallenges, setSelectedChallenges] = useState<Set<string>>(new Set());
+  const [repeat, setRepeat] = useState<
+    "off" | "daily" | "weekdays" | "weekly" | "monthly"
+  >("off");
 
   const reset = () => {
     setTitle("");
@@ -99,7 +130,24 @@ export function TaskCreateSheet({
     setMinuteInput("");
     setPeriodInput("AM");
     setShowCustomTime(false);
+    setSelectedChallenges(new Set());
+    setRepeat("off");
   };
+
+  // When opening for edit, hydrate from editingTask; for create, reset.
+  useEffect(() => {
+    if (!visible) return;
+    if (editingTask) {
+      setTitle(editingTask.title ?? "");
+      setDescription(editingTask.description ?? "");
+      setProjectId(editingTask.projectId);
+      setDueDate(editingTask.dueDate);
+      setDueTime(editingTask.dueTime);
+      setPriority(editingTask.priority);
+    } else {
+      reset();
+    }
+  }, [visible, editingTask]);
 
   const handleClose = () => {
     if (loading) return;
@@ -131,21 +179,78 @@ export function TaskCreateSheet({
     }
     setLoading(true);
     try {
-      await createTask({
-        projectId: effectiveProjectId as Id<"projects">,
-        title: title.trim(),
-        description: description.trim() || undefined,
-        dueDate,
-        dueTime,
-        priority,
-      });
+      if (isEditing && editingTask) {
+        await updateTask({
+          taskId: editingTask._id as Id<"tasks">,
+          title: title.trim(),
+          description: description.trim() || undefined,
+          dueDate,
+          dueTime,
+          priority,
+        });
+      } else {
+        const recurrenceRule =
+          repeat === "off"
+            ? undefined
+            : repeat === "weekly"
+              ? {
+                  frequency: "weekly" as const,
+                  daysOfWeek: [new Date(dueDate + "T00:00:00").getDay()],
+                }
+              : repeat === "monthly"
+                ? {
+                    frequency: "monthly" as const,
+                    dayOfMonth: new Date(dueDate + "T00:00:00").getDate(),
+                  }
+                : repeat === "weekdays"
+                  ? { frequency: "weekdays" as const }
+                  : { frequency: "daily" as const };
+
+        await createTask({
+          projectId: effectiveProjectId as Id<"projects">,
+          title: title.trim(),
+          description: description.trim() || undefined,
+          dueDate,
+          dueTime,
+          priority,
+          isRecurring: repeat !== "off",
+          recurrenceRule,
+          addToChallenges:
+            selectedChallenges.size > 0
+              ? (Array.from(selectedChallenges) as Id<"challenges">[])
+              : undefined,
+        });
+      }
       reset();
       onClose();
     } catch (err: any) {
-      Alert.alert("Failed", err?.message || "Couldn't create task.");
+      Alert.alert("Failed", err?.message || "Couldn't save task.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const onDelete = () => {
+    if (!editingTask) return;
+    Alert.alert("Delete task?", "This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          setLoading(true);
+          try {
+            await removeTask({ taskId: editingTask._id as Id<"tasks"> });
+            reset();
+            onClose();
+          } catch (err: any) {
+            Alert.alert("Failed", err?.message || "Couldn't delete.");
+          } finally {
+            setLoading(false);
+          }
+        },
+      },
+    ]);
   };
 
   const todayYmd = dateToYMD(new Date());
@@ -179,7 +284,7 @@ export function TaskCreateSheet({
             <TouchableOpacity onPress={handleClose} hitSlop={10}>
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.title}>New Task</Text>
+            <Text style={styles.title}>{isEditing ? "Edit Task" : "New Task"}</Text>
             <TouchableOpacity
               onPress={onSubmit}
               disabled={loading || !title.trim()}
@@ -194,7 +299,7 @@ export function TaskCreateSheet({
                     !title.trim() && styles.saveBtnDisabled,
                   ]}
                 >
-                  Add
+                  {isEditing ? "Save" : "Add"}
                 </Text>
               )}
             </TouchableOpacity>
@@ -454,6 +559,91 @@ export function TaskCreateSheet({
               )}
             </View>
 
+            {/* Repeat */}
+            {!isEditing && (
+              <View style={styles.section}>
+                <Text style={styles.label}>REPEAT</Text>
+                <View style={styles.chipRow}>
+                  {(
+                    [
+                      { id: "off", label: "Off" },
+                      { id: "daily", label: "Daily" },
+                      { id: "weekdays", label: "Weekdays" },
+                      { id: "weekly", label: "Weekly" },
+                      { id: "monthly", label: "Monthly" },
+                    ] as const
+                  ).map((r) => (
+                    <TouchableOpacity
+                      key={r.id}
+                      style={[
+                        styles.dateChip,
+                        repeat === r.id && styles.dateChipActive,
+                      ]}
+                      onPress={() => setRepeat(r.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.dateChipText,
+                          repeat === r.id && { color: colors.primary, fontWeight: "700" },
+                        ]}
+                      >
+                        {r.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {repeat !== "off" && (
+                  <Text style={styles.customTimeHint}>
+                    A new instance will be created when you complete this task.
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* Add to challenges (only for new tasks, only if active challenges exist) */}
+            {!isEditing && activeChallenges.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.label}>COUNT TOWARD CHALLENGE</Text>
+                <Text style={styles.help}>
+                  Counts toward your % completion in selected challenges.
+                </Text>
+                <View style={styles.chipRow}>
+                  {activeChallenges.map((c) => {
+                    const sel = selectedChallenges.has(c!._id);
+                    return (
+                      <TouchableOpacity
+                        key={c!._id}
+                        style={[
+                          styles.dateChip,
+                          sel && styles.dateChipActive,
+                        ]}
+                        onPress={() => {
+                          const next = new Set(selectedChallenges);
+                          if (sel) next.delete(c!._id);
+                          else next.add(c!._id);
+                          setSelectedChallenges(next);
+                        }}
+                      >
+                        <Ionicons
+                          name={sel ? "trophy" : "trophy-outline"}
+                          size={14}
+                          color={sel ? colors.primary : colors.text}
+                        />
+                        <Text
+                          style={[
+                            styles.dateChipText,
+                            sel && { color: colors.primary, fontWeight: "700" },
+                          ]}
+                        >
+                          {c!.title}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
             <View style={styles.section}>
               <Text style={styles.label}>PRIORITY</Text>
               <View style={styles.chipRow}>
@@ -505,10 +695,23 @@ export function TaskCreateSheet({
                     size={20}
                     color={colors.background}
                   />
-                  <Text style={styles.confirmBtnText}>Add Task</Text>
+                  <Text style={styles.confirmBtnText}>
+                    {isEditing ? "Save Changes" : "Add Task"}
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
+
+            {isEditing && (
+              <TouchableOpacity
+                style={styles.deleteBtn}
+                onPress={onDelete}
+                disabled={loading}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.red} />
+                <Text style={styles.deleteBtnText}>Delete Task</Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
@@ -740,5 +943,21 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: "800",
     letterSpacing: 1,
+  },
+  deleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.red,
+    marginTop: spacing.sm,
+  },
+  deleteBtnText: {
+    color: colors.red,
+    fontSize: fontSize.md,
+    fontWeight: "700",
   },
 });

@@ -206,6 +206,22 @@ export default function SignupScreen() {
     }
   }, [isLoaded, code, signUp]);
 
+  const onResendCode = useCallback(async () => {
+    if (!isLoaded) return;
+    setTopError(null);
+    try {
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      setTopError(null);
+      Alert.alert("Code sent", `New verification code sent to ${email}.`);
+    } catch (err: any) {
+      setTopError(
+        err.errors?.[0]?.longMessage ||
+          err.errors?.[0]?.message ||
+          "Failed to resend code."
+      );
+    }
+  }, [isLoaded, email, signUp]);
+
   const onOAuthSignUp = useCallback(
     async (startFlow: typeof startGoogleOAuth) => {
       try {
@@ -268,6 +284,24 @@ export default function SignupScreen() {
               ) : (
                 <Text style={styles.primaryButtonText}>Verify</Text>
               )}
+            </TouchableOpacity>
+
+            <View style={styles.resendRow}>
+              <Text style={styles.footerText}>Didn't get a code?</Text>
+              <TouchableOpacity onPress={onResendCode}>
+                <Text style={styles.footerLink}> Resend</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => {
+                setPendingVerification(false);
+                setCode("");
+                setTopError(null);
+              }}
+              style={{ alignItems: "center", marginTop: spacing.sm }}
+            >
+              <Text style={styles.footerText}>Back to sign up</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -659,4 +693,9 @@ const styles = StyleSheet.create({
   },
   footerText: { color: colors.textSecondary, fontSize: fontSize.sm },
   footerLink: { color: colors.primary, fontSize: fontSize.sm, fontWeight: "600" },
+  resendRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: spacing.md,
+  },
 });

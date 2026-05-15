@@ -14,6 +14,52 @@ async function requireUser(ctx: QueryCtx | MutationCtx) {
 }
 
 /**
+ * Get a single project by ID. Returns null if not owned by current user.
+ */
+export const get = query({
+  args: { projectId: v.id("projects") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user) return null;
+    const project = await ctx.db.get(args.projectId);
+    if (!project || project.userId !== user._id) return null;
+    return project;
+  },
+});
+
+/**
+ * List tasks within a specific project.
+ */
+export const tasksForProject = query({
+  args: { projectId: v.id("projects") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user) return [];
+
+    const tasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_projectId", (q) => q.eq("projectId", args.projectId))
+      .collect();
+    return tasks
+      .filter((t) => t.userId === user._id)
+      .sort((a, b) => {
+        if (a.dueDate !== b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+        return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+      });
+  },
+});
+
+/**
  * List all active projects for the current user, ordered by sortOrder.
  */
 export const list = query({
@@ -114,6 +160,23 @@ export const update = mutation({
       await ctx.db.patch(projectId, filtered);
     }
     return projectId;
+  },
+});
+
+/**
+ * Reorder projects by providing the full ordered list of project IDs.
+ */
+export const reorder = mutation({
+  args: { orderedIds: v.array(v.id("projects")) },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    for (let i = 0; i < args.orderedIds.length; i++) {
+      const project = await ctx.db.get(args.orderedIds[i]);
+      if (!project || project.userId !== user._id) continue;
+      if (project.sortOrder !== i) {
+        await ctx.db.patch(args.orderedIds[i], { sortOrder: i });
+      }
+    }
   },
 });
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "expo-router";
 import { api } from "../../convex/_generated/api";
 import { TaskCreateSheet } from "../../components/TaskCreateSheet";
+import { CheckInSheet } from "../../components/CheckInSheet";
+import { DashboardTutorial } from "../../components/DashboardTutorial";
 import { colors, spacing, fontSize, borderRadius } from "../../constants/theme";
 
 export default function DashboardScreen() {
@@ -22,11 +24,43 @@ export default function DashboardScreen() {
   const router = useRouter();
 
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<any>(null);
+  const [contractPromptShown, setContractPromptShown] = useState(false);
+
+  // Trigger Employment Contract prompt after 3 tasks completed (once per session)
+  useEffect(() => {
+    if (
+      !contractPromptShown &&
+      completedCount !== undefined &&
+      completedCount >= 3 &&
+      convexUser &&
+      !convexUser.contractSignedAt
+    ) {
+      setContractPromptShown(true);
+      Alert.alert(
+        "Boss wants a word",
+        "You've completed 3 tasks. Good start. Before we go further — sign your contract.",
+        [
+          { text: "Later", style: "cancel" },
+          {
+            text: "Review Contract",
+            onPress: () => router.push("/contract"),
+          },
+        ]
+      );
+    }
+  }, [completedCount, convexUser?.contractSignedAt, contractPromptShown]);
   const todayStr = new Date().toISOString().split("T")[0];
   const tasks = useQuery(api.tasks.listAll);
   const projects = useQuery(api.projects.list);
   const convexUser = useQuery(api.users.getCurrentUser);
   const toggleTask = useMutation(api.tasks.toggleComplete);
+  const invokePersonalDay = useMutation(api.users.invokePersonalDay);
+  const triggerCheckIn = useMutation(api.checkIns.triggerNow);
+  const pendingCheckIns = useQuery(api.checkIns.pending);
+  const completedCount = useQuery(api.users.completedTaskCount);
+
+  const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
 
   const loading = tasks === undefined || projects === undefined;
 
@@ -82,9 +116,9 @@ export default function DashboardScreen() {
     return (
       <SafeAreaView style={[styles.safe, styles.center]}>
         <Ionicons name="briefcase-outline" size={56} color={colors.textMuted} />
-        <Text style={styles.emptyTitle}>No projects yet</Text>
+        <Text style={styles.emptyTitle}>You haven't shown me anything yet</Text>
         <Text style={styles.emptyText}>
-          The Boss needs something to manage. Create your first project.
+          No projects on the board. Either you don't have ambitions, or you're stalling. Create your first project.
         </Text>
         <TouchableOpacity
           style={styles.emptyCta}
@@ -185,17 +219,85 @@ export default function DashboardScreen() {
         </View>
 
         {/* Tasks */}
+        {/* Pending check-ins */}
+        {pendingCheckIns && pendingCheckIns.length > 0 && (
+          <View style={{ gap: spacing.sm }}>
+            {pendingCheckIns.map((ci) => (
+              <TouchableOpacity
+                key={ci._id}
+                style={styles.checkinCard}
+                onPress={() =>
+                  setActiveCheckIn({
+                    _id: ci._id,
+                    bossMessage: ci.bossMessage,
+                    checkInType: ci.checkInType,
+                    _creationTime: ci._creationTime,
+                  })
+                }
+              >
+                <View style={styles.checkinIcon}>
+                  <Ionicons name="notifications" size={18} color={colors.yellow} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.checkinTitle}>
+                    {ci.checkInType === "morning"
+                      ? "Morning Brief"
+                      : ci.checkInType === "midday"
+                        ? "Midday Check"
+                        : ci.checkInType === "afternoon"
+                          ? "Afternoon Push"
+                          : ci.checkInType === "evening"
+                            ? "End of Day Review"
+                            : "Boss Message"}
+                  </Text>
+                  <Text style={styles.checkinPreview} numberOfLines={2}>
+                    {ci.bossMessage}
+                  </Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Your Tasks</Text>
-          <TouchableOpacity onPress={() => setTaskSheetOpen(true)}>
-            <Text style={styles.sectionAction}>+ Add</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: spacing.md }}>
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert("Trigger check-in", "Pick a type to test", [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Morning",
+                    onPress: () => triggerCheckIn({ checkInType: "morning" }),
+                  },
+                  {
+                    text: "Midday",
+                    onPress: () => triggerCheckIn({ checkInType: "midday" }),
+                  },
+                  {
+                    text: "Inbox",
+                    onPress: () => triggerCheckIn({ checkInType: "inbox" }),
+                  },
+                ]);
+              }}
+            >
+              <Text style={styles.sectionAction}>Test ✨</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setTaskSheetOpen(true)}>
+              <Text style={styles.sectionAction}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {tasks.length === 0 ? (
           <View style={styles.noTasks}>
             <Text style={styles.noTasksText}>
-              No tasks yet. Tap + Add to create one.
+              Empty queue. Make me give a damn — add a task.
             </Text>
           </View>
         ) : (
@@ -228,6 +330,19 @@ export default function DashboardScreen() {
                             styles.taskOverdue,
                         ]}
                         onPress={() => toggleTask({ taskId: task._id })}
+                        onLongPress={() => {
+                          setEditingTask({
+                            _id: task._id,
+                            title: task.title,
+                            description: task.description,
+                            projectId: task.projectId,
+                            dueDate: task.dueDate,
+                            dueTime: task.dueTime,
+                            priority: task.priority,
+                          });
+                          setTaskSheetOpen(true);
+                        }}
+                        delayLongPress={350}
                         activeOpacity={0.7}
                       >
                         <View
@@ -317,12 +432,39 @@ export default function DashboardScreen() {
         {/* Personal Day CTA */}
         <TouchableOpacity
           style={styles.personalDayCta}
-          onPress={() =>
+          onPress={() => {
+            if (personalDaysRemaining <= 0) {
+              Alert.alert(
+                "Out of personal days",
+                "You've used all your personal days for this month."
+              );
+              return;
+            }
             Alert.alert(
-              "Personal Day",
-              `You have ${personalDaysRemaining} of ${convexUser?.personalDaysPerMonth ?? 0} personal days remaining this month. Invoking will be available soon.`
-            )
-          }
+              "Invoke Personal Day?",
+              `This protects your ${streak}-day streak and pauses penalty triggers for today. You'll have ${personalDaysRemaining - 1} left this month.`,
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Invoke",
+                  onPress: async () => {
+                    try {
+                      await invokePersonalDay({});
+                      Alert.alert(
+                        "Personal Day invoked",
+                        "Boss has been notified. Take the day."
+                      );
+                    } catch (err: any) {
+                      Alert.alert(
+                        "Failed",
+                        err?.message || "Couldn't invoke personal day."
+                      );
+                    }
+                  },
+                },
+              ]
+            );
+          }}
         >
           <Ionicons name="umbrella-outline" size={18} color={colors.textSecondary} />
           <Text style={styles.personalDayText}>
@@ -333,8 +475,20 @@ export default function DashboardScreen() {
 
       <TaskCreateSheet
         visible={taskSheetOpen}
-        onClose={() => setTaskSheetOpen(false)}
+        onClose={() => {
+          setTaskSheetOpen(false);
+          setEditingTask(null);
+        }}
+        editingTask={editingTask}
       />
+
+      <CheckInSheet
+        visible={!!activeCheckIn}
+        checkIn={activeCheckIn}
+        onClose={() => setActiveCheckIn(null)}
+      />
+
+      <DashboardTutorial />
     </SafeAreaView>
   );
 }
@@ -493,6 +647,34 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: "700",
     letterSpacing: 1.5,
+  },
+  checkinCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: "rgba(234, 179, 8, 0.1)",
+    borderWidth: 1,
+    borderColor: colors.yellow,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+  },
+  checkinIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(234, 179, 8, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkinTitle: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: "700",
+  },
+  checkinPreview: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginTop: 2,
   },
   taskItem: {
     flexDirection: "row",
