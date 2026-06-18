@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSignIn } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, fontSize, borderRadius } from "../../constants/theme";
 
 type Step = "email" | "code" | "newPassword";
@@ -24,6 +25,9 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const onSendResetCode = useCallback(async () => {
@@ -48,6 +52,12 @@ export default function ForgotPasswordScreen() {
 
   const onVerifyAndReset = useCallback(async () => {
     if (!isLoaded) return;
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -69,7 +79,7 @@ export default function ForgotPasswordScreen() {
     } finally {
       setLoading(false);
     }
-  }, [isLoaded, code, newPassword]);
+  }, [isLoaded, code, newPassword, confirmPassword]);
 
   return (
     <KeyboardAvoidingView
@@ -124,19 +134,54 @@ export default function ForgotPasswordScreen() {
                 keyboardType="number-pad"
                 autoComplete="one-time-code"
               />
-              <TextInput
-                style={styles.input}
-                placeholder="New Password"
-                placeholderTextColor={colors.textMuted}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry
-                autoComplete="new-password"
-              />
+              <View style={styles.passwordWrap}>
+                <TextInput
+                  style={[styles.input, styles.inputPassword]}
+                  placeholder="New Password"
+                  placeholderTextColor={colors.textMuted}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  secureTextEntry={!showPassword}
+                  autoComplete="new-password"
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword((v) => !v)}
+                  hitSlop={10}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.passwordWrap}>
+                <TextInput
+                  style={[styles.input, styles.inputPassword]}
+                  placeholder="Confirm Password"
+                  placeholderTextColor={colors.textMuted}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  autoComplete="new-password"
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowConfirmPassword((v) => !v)}
+                  hitSlop={10}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
                 style={[styles.primaryButton, loading && styles.buttonDisabled]}
                 onPress={onVerifyAndReset}
-                disabled={loading || !code || !newPassword}
+                disabled={loading || !code || !newPassword || !confirmPassword}
               >
                 {loading ? (
                   <ActivityIndicator color={colors.background} />
@@ -197,6 +242,15 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  passwordWrap: { position: "relative" },
+  inputPassword: { paddingRight: 48 },
+  eyeBtn: {
+    position: "absolute",
+    right: spacing.md,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
   },
   primaryButton: {
     backgroundColor: colors.primary,

@@ -58,6 +58,9 @@ export default defineSchema({
     trialEndsAt: v.optional(v.number()),
     currentStreak: v.number(),
     longestStreak: v.number(),
+    // Local calendar day ("YYYY-MM-DD") last credited to the streak — guards
+    // against double-counting (T0.2).
+    lastStreakDate: v.optional(v.string()),
     onboardingStep: v.optional(v.string()),
     expoPushToken: v.optional(v.string()),
   })
@@ -153,6 +156,8 @@ export default defineSchema({
     ),
     completedAt: v.optional(v.number()),
     sortOrder: v.optional(v.number()),
+    // Optional tasks do not count toward streaks; absent/true = required (T0.2).
+    required: v.optional(v.boolean()),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_dueDate", ["userId", "dueDate"])
@@ -162,11 +167,24 @@ export default defineSchema({
 
   penalties: defineTable({
     userId: v.id("users"),
-    penaltyTarget: v.union(v.literal("charity"), v.literal("partner")),
+    // Optional: a "reputation" stake has no charity/partner target (T0.3).
+    penaltyTarget: v.optional(v.union(v.literal("charity"), v.literal("partner"))),
     charityName: v.optional(v.string()),
     charityStripeId: v.optional(v.string()),
     partnerId: v.optional(v.id("users")),
     amount: v.number(),
+    // Non-monetary stakes so the consequence system works before Stripe (T0.3).
+    stakeType: v.optional(
+      v.union(v.literal("reputation"), v.literal("charity"), v.literal("partner"))
+    ),
+    status: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("active"),
+        v.literal("resolved"),
+        v.literal("waived")
+      )
+    ),
     triggerType: v.union(
       v.literal("task_missed"),
       v.literal("goal_missed"),
@@ -177,7 +195,9 @@ export default defineSchema({
     linkedTaskId: v.optional(v.id("tasks")),
     linkedChallengeId: v.optional(v.id("challenges")),
     isActive: v.boolean(),
-  }).index("by_userId", ["userId"]),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_linkedTaskId", ["linkedTaskId"]),
 
   penaltyPayments: defineTable({
     penaltyId: v.id("penalties"),

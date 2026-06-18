@@ -31,4 +31,11 @@ crons.weekly(
   internal.reviews._runWeeklyReviews
 );
 
+// Reset streaks broken by a missed required task — runs daily.
+crons.daily(
+  "reset broken streaks",
+  { hourUTC: 8, minuteUTC: 0 },
+  internal.streaks.resetBrokenStreaks
+);
+
 export default crons;

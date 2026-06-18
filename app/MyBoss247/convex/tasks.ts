@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
+import { updateStreakForDay } from "./streaks";
+import { isRequired } from "./lib/streakLogic";
 
 /**
  * Compute the next due date for a recurring task.
@@ -205,6 +207,7 @@ export const create = mutation({
         dayOfMonth: v.optional(v.number()),
       })
     ),
+    required: v.optional(v.boolean()),
     addToChallenges: v.optional(v.array(v.id("challenges"))),
   },
   handler: async (ctx, args) => {
@@ -237,6 +240,7 @@ export const create = mutation({
       warningLevel: "green",
       isRecurring: args.isRecurring ?? false,
       recurrenceRule: args.recurrenceRule,
+      required: args.required,
       sortOrder: sameDayTasks.length,
     });
 
@@ -403,6 +407,11 @@ export const toggleComplete = mutation({
 
     await recalculateProjectProgress(ctx, task.projectId, user._id);
     await recalcChallengesForTask(ctx, args.taskId, user._id);
+
+    // T0.2 — credit/break the streak when a required task is newly completed.
+    if (!wasCompleted && isRequired(task)) {
+      await updateStreakForDay(ctx, user, task.dueDate, now);
+    }
   },
 });
 
