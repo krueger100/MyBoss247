@@ -9,7 +9,7 @@ An accountability app for solo entrepreneurs who struggle with self-discipline. 
 - **Real money on the line** — penalties are auto-charged to charity or an accountability partner
 - **Opportunity Cost Clock** — see your wasted hours tick up as dollars based on your business's earning potential
 - **3 Boss personalities** — Drill Sergeant, Tough Coach, or Supportive Manager
-- **AI Boss Chat** — GPT-4o stays in character and references your real task data
+- **In-app notifications** — a bell with a live alerts panel surfaces your overdue and upcoming tasks at a glance
 - **Head-to-head challenges** — compete with partners for cash; VIP $5K+ duels with human verifiers
 
 ## Stack
@@ -18,7 +18,6 @@ An accountability app for solo entrepreneurs who struggle with self-discipline. 
 - **Backend:** Convex (database, queries, mutations, actions)
 - **Auth:** Clerk (with Convex JWT integration)
 - **Payments:** Stripe + Stripe Connect (planned)
-- **AI:** OpenAI GPT-4o (planned)
 
 ## Status
 
@@ -31,7 +30,7 @@ An accountability app for solo entrepreneurs who struggle with self-discipline. 
 | Dashboard wired to live Convex data | ✅ |
 | Task CRUD + Opportunity Cost Clock | ✅ |
 | Project CRUD | ✅ (UI list pending real wiring) |
-| AI Boss Chat | ⏳ |
+| In-app task notifications (overdue / upcoming) | ✅ |
 | Stripe penalty charges | ⏳ |
 | Push notifications + check-in cron | ⏳ |
 | Accountability partners + challenges | ⏳ |

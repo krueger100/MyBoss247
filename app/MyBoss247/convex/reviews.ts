@@ -7,13 +7,10 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 
-const PERSONALITY_TONES: Record<string, string> = {
-  drill_sergeant:
-    "Aggressive, military, no-nonsense. Address shortcomings bluntly.",
-  tough_coach:
-    "Firm but fair. Honest, direct. Acknowledge wins briefly, focus on what needs to improve.",
-  supportive_manager:
-    "Encouraging but honest. Celebrate wins. Frame misses as learning.",
+const NEXT_WEEK_CLOSE: Record<string, string> = {
+  drill_sergeant: "No excuses next week. Execute.",
+  tough_coach: "Match your earning potential. Every hour matters.",
+  supportive_manager: "Proud of the effort — let's build on it next week.",
 };
 
 /**
@@ -70,7 +67,6 @@ export const _gatherWeekData = internalQuery({
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
 
-    // Tasks due in this week
     const tasks = await ctx.db
       .query("tasks")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -82,7 +78,6 @@ export const _gatherWeekData = internalQuery({
     const completed = weekTasks.filter((t) => t.status === "completed").length;
     const overdue = weekTasks.filter((t) => t.status === "overdue").length;
 
-    // Penalties triggered this week
     const startMs = Date.parse(args.weekStart + "T00:00:00");
     const endMs = Date.parse(args.weekEnd + "T23:59:59");
     const payments = await ctx.db
@@ -105,12 +100,6 @@ export const _gatherWeekData = internalQuery({
       0
     );
 
-    // Estimate week value captured: per day, the percentage of tasks completed
-    // × project daily potential, summed across the 7 days.
-    const dailyKey = (ms: number) => {
-      const d = new Date(ms);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    };
     const byDay: Record<string, { done: number; total: number }> = {};
     for (const t of weekTasks) {
       const k = t.dueDate;
@@ -160,22 +149,12 @@ export const _insertReview = internalMutation({
     valuePotential: v.number(),
   },
   handler: async (ctx, args) => {
-    const reviewId = await ctx.db.insert("performanceReviews", args);
-
-    // Drop a notification in chat thread
-    await ctx.db.insert("chatMessages", {
-      userId: args.userId,
-      role: "boss",
-      content: `📋 Your weekly performance review is ready. Score: ${args.score}/100. Tap Profile → Performance Reviews to see the full report.`,
-      status: "sent",
-    });
-
-    return reviewId;
+    return await ctx.db.insert("performanceReviews", args);
   },
 });
 
 /**
- * Internal — generate a single review for one user.
+ * Internal — generate a single templated review (no AI) for one user.
  */
 export const _generateReview = internalAction({
   args: {
@@ -202,9 +181,6 @@ export const _generateReview = internalAction({
     // Score: weighted 60% task completion + 40% capture rate
     const score = Math.round(completionRate * 0.6 + captureRate * 0.4);
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    let reviewText: string;
-
     const factSheet = `Week: ${args.weekStart} → ${args.weekEnd}
 Tasks: ${data.tasksCompleted}/${data.tasksTotal} completed (${completionRate}%)
 Overdue: ${data.tasksOverdue}
@@ -215,8 +191,10 @@ Longest streak: ${data.longestStreak} days
 Projects:
 ${data.projectsSummary.map((p) => `  • ${p.title}: ${p.progress}%`).join("\n")}`;
 
-    if (!apiKey) {
-      reviewText = `# Weekly Performance Review
+    const close =
+      NEXT_WEEK_CLOSE[data.personality] ?? NEXT_WEEK_CLOSE.tough_coach;
+
+    const reviewText = `# Weekly Performance Review
 
 **Score: ${score}/100**
 
@@ -232,56 +210,13 @@ ${
 }
 
 ## What went well
-${data.tasksCompleted > 0 ? `You completed ${data.tasksCompleted} tasks this week.` : "Nothing notable."}
+${data.tasksCompleted > 0 ? `You completed ${data.tasksCompleted} task${data.tasksCompleted === 1 ? "" : "s"} this week.` : "Nothing notable."}
 
 ## What needs improvement
-${data.tasksOverdue > 0 ? `${data.tasksOverdue} tasks went overdue.` : "Stay focused."}
+${data.tasksOverdue > 0 ? `${data.tasksOverdue} task${data.tasksOverdue === 1 ? "" : "s"} went overdue.` : "Stay focused and keep the streak alive."}
 
 ## Next week
-Match your earning potential. Every hour matters.`;
-    } else {
-      const personality = PERSONALITY_TONES[data.personality] ?? PERSONALITY_TONES.tough_coach;
-      const prompt = `Write a formal weekly performance review for an employee named ${data.displayName}.
-You are their boss. Tone: ${personality}
-
-DATA:
-${factSheet}
-Score: ${score}/100
-
-Format the review with these sections:
-- ## Summary (2-3 sentences, your overall take)
-- ## What went well (bullet points, reference real numbers/projects)
-- ## What needs improvement (bullet points, reference real numbers/projects)
-- ## Next week's expectations (1-2 sentences)
-
-Stay in character. Reference specific numbers. Keep total under 300 words.`;
-
-      try {
-        const resp = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: "claude-haiku-4-5",
-            system:
-              "You are a strict but professional manager writing a formal HR-style weekly performance review.",
-            messages: [{ role: "user", content: prompt }],
-            max_tokens: 700,
-          }),
-        });
-        if (resp.ok) {
-          const json: any = await resp.json();
-          reviewText = json?.content?.[0]?.text?.trim() ?? "Review unavailable.";
-        } else {
-          reviewText = `# Performance Review\n\n${factSheet}\n\n(AI generation failed.)`;
-        }
-      } catch {
-        reviewText = `# Performance Review\n\n${factSheet}\n\n(AI generation failed.)`;
-      }
-    }
+${close}`;
 
     await ctx.runMutation(internal.reviews._insertReview, {
       userId: args.userId,
@@ -308,10 +243,8 @@ export const _runWeeklyReviews = internalAction({
   handler: async (ctx) => {
     const users = await ctx.runQuery(internal.checkIns._allActiveUsers, {});
 
-    // Week range: most recent Mon through Sun (today)
     const today = new Date();
     const dow = today.getDay(); // 0=Sun
-    // If today is Sunday (0), weekEnd = today; weekStart = today - 6 days
     const daysSinceMonday = dow === 0 ? 6 : dow - 1;
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - daysSinceMonday);

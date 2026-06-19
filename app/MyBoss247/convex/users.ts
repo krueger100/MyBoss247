@@ -283,14 +283,6 @@ export const signContract = mutation({
     const now = Date.now();
     await ctx.db.patch(user._id, { contractSignedAt: now });
 
-    // Drop a Boss confirmation into chat
-    await ctx.db.insert("chatMessages", {
-      userId: user._id,
-      role: "boss",
-      content: "Contract signed. Welcome aboard. Now show me you're serious.",
-      status: "sent",
-    });
-
     return now;
   },
 });

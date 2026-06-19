@@ -1,10 +1,14 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { colors } from "../../constants/theme";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const notifs = useQuery(api.notifications.list, {});
+  const notifCount = notifs?.total ?? 0;
 
   return (
     <Tabs
@@ -51,11 +55,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="chat"
+        name="notifications"
         options={{
-          title: "Boss Chat",
+          title: "Alerts",
+          tabBarBadge: notifCount > 0 ? notifCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.red },
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-ellipses" size={size} color={color} />
+            <Ionicons name="notifications" size={size} color={color} />
           ),
         }}
       />

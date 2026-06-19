@@ -8,26 +8,67 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 
-const PERSONALITY_TONES: Record<string, string> = {
-  drill_sergeant: "Aggressive, zero tolerance, military-style. Use short bark commands.",
-  tough_coach: "Firm but fair. Direct. Results-focused. No coddling.",
-  supportive_manager: "Encouraging, empathetic, but still holds accountability.",
-};
+type Personality = "drill_sergeant" | "tough_coach" | "supportive_manager";
+type CheckInType =
+  | "morning"
+  | "midday"
+  | "afternoon"
+  | "evening"
+  | "warning"
+  | "inbox";
 
-const TYPE_DIRECTIVES: Record<string, string> = {
-  morning:
-    "It's morning. Brief them on today's tasks. Set expectations. Tone: directive, agenda-setting.",
-  midday:
-    "It's noon. Demand a progress update. Tone: firm, expects an answer.",
-  afternoon:
-    "It's 3pm. Count remaining tasks. Tone: urgent, time pressure.",
-  evening:
-    "It's 6pm. Review what was accomplished today. Tone: evaluative.",
-  warning:
-    "A task is overdue or close to overdue. Tone: escalated, demands action.",
-  inbox:
-    "Random check during work hours. Short, unexpected. Reference one specific data point.",
-};
+/**
+ * Build an in-character check-in message from templates (no AI).
+ * References the user's real task counts so it stays concrete.
+ */
+function buildCheckInMessage(
+  type: CheckInType,
+  personality: Personality,
+  completed: number,
+  total: number
+): string {
+  const remaining = Math.max(total - completed, 0);
+  const s = (n: number) => (n === 1 ? "" : "s");
+  switch (type) {
+    case "morning":
+      if (personality === "drill_sergeant")
+        return `0800. ${total} task${s(total)} on the board. No excuses — move.`;
+      if (personality === "supportive_manager")
+        return `Good morning! ${total} task${s(total)} today — I know you can make real progress. Let's go.`;
+      return `Morning. ${total} task${s(total)} today. Let's see what you're made of.`;
+    case "midday":
+      if (personality === "drill_sergeant")
+        return `Noon. ${completed}/${total} done, ${remaining} still open. Pick up the pace.`;
+      if (personality === "supportive_manager")
+        return `Midday check — ${completed}/${total} done. Nice momentum; ${remaining} to go.`;
+      return `It's noon. ${completed}/${total} done. Show me progress on the other ${remaining}.`;
+    case "afternoon":
+      if (personality === "drill_sergeant")
+        return `1500. ${remaining} task${s(remaining)} left and the clock is winning. Fix that.`;
+      if (personality === "supportive_manager")
+        return `Afternoon! ${remaining} left — a focused push now and you finish strong.`;
+      return `3pm. ${remaining} task${s(remaining)} remaining. Time's tightening — close them out.`;
+    case "evening":
+      if (personality === "drill_sergeant")
+        return `End of day. ${completed}/${total} shipped. ${remaining > 0 ? `${remaining} unfinished. Unacceptable.` : "All clear. Adequate."}`;
+      if (personality === "supportive_manager")
+        return `Day's wrapping up — ${completed}/${total} done. ${remaining > 0 ? `${remaining} slipped, but tomorrow's a fresh start.` : "Full clear — proud of you!"}`;
+      return `End of day. ${completed}/${total} done.${remaining > 0 ? ` ${remaining} unfinished — fix that tomorrow.` : " Clean sweep. That's what I expect."}`;
+    case "warning":
+      if (personality === "drill_sergeant")
+        return `You're falling behind — ${remaining} task${s(remaining)} at risk. Handle it NOW.`;
+      if (personality === "supportive_manager")
+        return `Heads up — ${remaining} task${s(remaining)} slipping. Let's not let it pile up. What do you need?`;
+      return `You're behind on ${remaining} task${s(remaining)}. Don't let it slide — act now.`;
+    case "inbox":
+    default:
+      if (personality === "drill_sergeant")
+        return `I pulled your numbers. ${completed}/${total} done. Explain.`;
+      if (personality === "supportive_manager")
+        return `Just checking in — ${completed}/${total} done so far. You've got this.`;
+      return `Quick pulse check: ${completed}/${total} done. Keep moving.`;
+  }
+}
 
 /**
  * Pending check-ins for the current user (not yet responded, scheduledFor <= now).
@@ -50,7 +91,9 @@ export const pending = query({
         q.eq("userId", user._id).eq("status", "pending")
       )
       .collect();
-    return items.filter((c) => c.scheduledFor <= now).sort((a, b) => a.scheduledFor - b.scheduledFor);
+    return items
+      .filter((c) => c.scheduledFor <= now)
+      .sort((a, b) => a.scheduledFor - b.scheduledFor);
   },
 });
 
@@ -103,7 +146,6 @@ export const respond = mutation({
     }
 
     // Mark provided tasks as completed
-    const completedTitles: string[] = [];
     if (args.completedTaskIds && args.completedTaskIds.length > 0) {
       const now = Date.now();
       for (const taskId of args.completedTaskIds) {
@@ -114,7 +156,6 @@ export const respond = mutation({
             completedAt: now,
             warningLevel: "green",
           });
-          completedTitles.push(task.title);
         }
       }
     }
@@ -125,31 +166,36 @@ export const respond = mutation({
       respondedAt: Date.now(),
     });
 
-    // Mirror the employee's response into chat so the conversation has continuity
-    const chatContent = [
-      completedTitles.length > 0
-        ? `✓ ${completedTitles.join("\n✓ ")}`
-        : "",
-      args.response,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-
-    if (chatContent) {
-      await ctx.db.insert("chatMessages", {
-        userId: user._id,
-        role: "employee",
-        content: chatContent,
-        status: "sent",
-      });
-    }
-
     return { ok: true };
   },
 });
 
 /**
- * Internal — generate a check-in via Claude and insert it.
+ * Internal — minimal context for templating a check-in.
+ */
+export const _checkInContext = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const todays = await ctx.db
+      .query("tasks")
+      .withIndex("by_userId_dueDate", (q) =>
+        q.eq("userId", args.userId).eq("dueDate", todayStr)
+      )
+      .collect();
+    return {
+      personality: user.bossSettings.personality as Personality,
+      total: todays.length,
+      completed: todays.filter((t) => t.status === "completed").length,
+    };
+  },
+});
+
+/**
+ * Internal — build a templated check-in (no AI) and insert it.
  * Called by the cron scheduler.
  */
 export const _generateCheckIn = internalAction({
@@ -165,63 +211,17 @@ export const _generateCheckIn = internalAction({
     ),
   },
   handler: async (ctx, args) => {
-    const data = await ctx.runQuery(internal.chat._gatherContext, {
+    const data = await ctx.runQuery(internal.checkIns._checkInContext, {
       userId: args.userId,
     });
     if (!data) return;
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    let bossMessage: string;
-
-    if (!apiKey) {
-      // Graceful fallback so check-ins still happen without API
-      const fallbacks: Record<string, string> = {
-        morning: `Morning. ${data.todaysTasks.length} tasks waiting. Get to work.`,
-        midday: `It's noon. Show me progress.`,
-        afternoon: `3pm. Time's running out. How many done?`,
-        evening: `End of day. What did you ship?`,
-        warning: `You're falling behind. Fix this.`,
-        inbox: `Status update. Now.`,
-      };
-      bossMessage = fallbacks[args.checkInType];
-    } else {
-      const personality = PERSONALITY_TONES[data.personality] ?? PERSONALITY_TONES.tough_coach;
-      const directive = TYPE_DIRECTIVES[args.checkInType];
-      const completed = data.todaysTasks.filter((t) => t.status === "completed").length;
-
-      const prompt = `You are this user's boss, personality: ${personality}
-User: ${data.displayName}. Streak: ${data.streak} days.
-Today's tasks: ${completed}/${data.todaysTasks.length} done.
-${data.todaysTasks.map((t) => `  • [${t.status}] ${t.title}`).join("\n")}
-
-Write a ${args.checkInType} check-in message. ${directive}
-Rules: 1-2 sentences max. Reference real task names or numbers. Stay in character. No greeting fluff.`;
-
-      try {
-        const resp = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: "claude-haiku-4-5",
-            system: "You generate short in-character boss check-in messages. 1-2 sentences only.",
-            messages: [{ role: "user", content: prompt }],
-            max_tokens: 150,
-          }),
-        });
-        if (resp.ok) {
-          const json: any = await resp.json();
-          bossMessage = json?.content?.[0]?.text?.trim() ?? "Status update. Now.";
-        } else {
-          bossMessage = "Check-in time. Where are we?";
-        }
-      } catch {
-        bossMessage = "Check-in time. Where are we?";
-      }
-    }
+    const bossMessage = buildCheckInMessage(
+      args.checkInType,
+      data.personality,
+      data.completed,
+      data.total
+    );
 
     await ctx.runMutation(internal.checkIns._insertCheckIn, {
       userId: args.userId,
@@ -251,14 +251,6 @@ export const _insertCheckIn = internalMutation({
       checkInType: args.checkInType,
       status: "pending",
       scheduledFor: Date.now(),
-    });
-
-    // Also mirror in chat thread so it shows up in Boss Chat
-    await ctx.db.insert("chatMessages", {
-      userId: args.userId,
-      role: "boss",
-      content: args.bossMessage,
-      status: "sent",
     });
 
     // Fire push notification
@@ -292,12 +284,7 @@ export const _runScheduledCheckIns = internalAction({
 
     for (const user of users) {
       const times = user.bossSettings.checkinTimes;
-      let type:
-        | "morning"
-        | "midday"
-        | "afternoon"
-        | "evening"
-        | undefined;
+      let type: "morning" | "midday" | "afternoon" | "evening" | undefined;
 
       // 15-min window check
       if (withinWindow(times.morning, hourMinute)) type = "morning";
@@ -369,12 +356,6 @@ export const _countTodayByType = internalQuery({
 /**
  * Boss Inbox — fires unscheduled messages during working hours based on
  * each user's inboxFrequency setting. Called by an hourly cron.
- *
- * Frequencies (random chance per hour):
- *   off       0%
- *   light     ~11% (≈1 per 9-hour day)
- *   normal    ~22% (≈2 per day)
- *   intense   ~33% (≈3 per day)
  */
 export const _runBossInbox = internalAction({
   args: {},

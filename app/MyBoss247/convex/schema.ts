@@ -241,15 +241,6 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_userId_status", ["userId", "status"]),
 
-  chatMessages: defineTable({
-    userId: v.id("users"),
-    role: v.union(v.literal("boss"), v.literal("employee")),
-    content: v.string(),
-    status: v.optional(
-      v.union(v.literal("sending"), v.literal("sent"), v.literal("failed"))
-    ),
-  }).index("by_userId", ["userId"]),
-
   performanceReviews: defineTable({
     userId: v.id("users"),
     weekStartDate: v.string(),

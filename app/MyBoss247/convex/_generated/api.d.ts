@@ -10,13 +10,13 @@
 
 import type * as achievements from "../achievements.js";
 import type * as challenges from "../challenges.js";
-import type * as chat from "../chat.js";
 import type * as checkIns from "../checkIns.js";
 import type * as crons from "../crons.js";
 import type * as files from "../files.js";
 import type * as goals from "../goals.js";
 import type * as lib_bossMessages from "../lib/bossMessages.js";
 import type * as lib_dueDate from "../lib/dueDate.js";
+import type * as lib_notifications from "../lib/notifications.js";
 import type * as lib_streakLogic from "../lib/streakLogic.js";
 import type * as notifications from "../notifications.js";
 import type * as partners from "../partners.js";
@@ -38,13 +38,13 @@ import type {
 declare const fullApi: ApiFromModules<{
   achievements: typeof achievements;
   challenges: typeof challenges;
-  chat: typeof chat;
   checkIns: typeof checkIns;
   crons: typeof crons;
   files: typeof files;
   goals: typeof goals;
   "lib/bossMessages": typeof lib_bossMessages;
   "lib/dueDate": typeof lib_dueDate;
+  "lib/notifications": typeof lib_notifications;
   "lib/streakLogic": typeof lib_streakLogic;
   notifications: typeof notifications;
   partners: typeof partners;
