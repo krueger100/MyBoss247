@@ -217,30 +217,43 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.avatar}
-            onPress={() => setAvatarPickerOpen(true)}
-            activeOpacity={0.8}
-          >
-            {convexUser.avatarUrl ? (
-              <Image
-                source={{ uri: convexUser.avatarUrl }}
-                style={styles.avatarImg}
-              />
-            ) : (
-              <Text style={styles.avatarText}>
-                {convexUser.displayName?.[0]?.toUpperCase() ||
-                  clerkUser?.firstName?.[0] ||
-                  "E"}
+        <View style={styles.headerCard}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.avatar}
+              onPress={() => setAvatarPickerOpen(true)}
+              activeOpacity={0.8}
+            >
+              {convexUser.avatarUrl ? (
+                <Image
+                  source={{ uri: convexUser.avatarUrl }}
+                  style={styles.avatarImg}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {convexUser.displayName?.[0]?.toUpperCase() ||
+                    clerkUser?.firstName?.[0] ||
+                    "E"}
+                </Text>
+              )}
+              <View style={styles.avatarEditBadge}>
+                <Ionicons name="camera" size={13} color={colors.background} />
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.headerInfo}>
+              <Text style={styles.name} numberOfLines={1}>
+                {convexUser.displayName}
               </Text>
-            )}
-            <View style={styles.avatarEditBadge}>
-              <Ionicons name="camera" size={14} color={colors.background} />
+              <Text style={styles.email} numberOfLines={1}>
+                {convexUser.email}
+              </Text>
+              <View style={styles.tierPill}>
+                <Ionicons name="star" size={11} color={colors.primary} />
+                <Text style={styles.tierPillText}>{tier}</Text>
+              </View>
             </View>
-          </TouchableOpacity>
-          <Text style={styles.name}>{convexUser.displayName}</Text>
-          <Text style={styles.email}>{convexUser.email}</Text>
+          </View>
 
           <View style={styles.statsStrip}>
             <View style={styles.stat}>
@@ -254,7 +267,9 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
-              <Text style={styles.statValue}>{convexUser.inviteCode}</Text>
+              <Text style={styles.statValue} numberOfLines={1}>
+                {convexUser.inviteCode}
+              </Text>
               <Text style={styles.statLabel}>INVITE</Text>
             </View>
           </View>
@@ -326,20 +341,27 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   center: { justifyContent: "center", alignItems: "center", padding: spacing.lg },
   content: { padding: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
-  header: { alignItems: "center", paddingVertical: spacing.lg },
+  headerCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
+  headerTop: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  headerInfo: { flex: 1, minWidth: 0 },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: colors.surfaceTertiary,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
     borderColor: colors.primary,
-    overflow: "hidden",
   },
-  avatarImg: { width: "100%", height: "100%" },
-  avatarText: { color: colors.text, fontSize: 32, fontWeight: "800" },
+  avatarImg: { width: "100%", height: "100%", borderRadius: 36 },
+  avatarText: { color: colors.text, fontSize: 30, fontWeight: "800" },
   avatarEditBadge: {
     position: "absolute",
     bottom: -2,
@@ -349,27 +371,31 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     backgroundColor: colors.primary,
     borderWidth: 2,
-    borderColor: colors.background,
+    borderColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  name: {
-    color: colors.text,
-    fontSize: fontSize.xl,
-    fontWeight: "700",
-    marginTop: spacing.md,
+  name: { color: colors.text, fontSize: fontSize.xl, fontWeight: "800" },
+  email: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
+  tierPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 4,
+    marginTop: spacing.sm,
+    backgroundColor: colors.primaryMuted,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full,
   },
-  email: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 4 },
+  tierPillText: { color: colors.primary, fontSize: fontSize.xs, fontWeight: "700" },
   statsStrip: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   stat: { alignItems: "center", flex: 1 },
   statValue: { color: colors.text, fontSize: fontSize.md, fontWeight: "700" },
